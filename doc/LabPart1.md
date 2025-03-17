@@ -270,19 +270,18 @@ $$S=\frac{2^{32}f}{f_\mathrm{s}}$$
 > This is a limitation of the 22kHz sample rate.
 
 5.	A timer is needed to trigger the interrupt that will call `sampleISR()`.
-	Create a timer in the setup function using the stm32duino library class `HardwareTimer`:
+	Create a global timer object using the stm32duino library class `HardwareTimer` and the hardware timer instance `TIM1`:
 
 	```C++
-	TIM_TypeDef *Instance = TIM1;
-	HardwareTimer *sampleTimer = new HardwareTimer(Instance);
+	HardwareTimer sampleTimer(TIM1);
 	```
 
-	The timer is configured by setting the period, attaching the ISR and starting the timer, also in the setup function:
+	The timer is configured by setting the period, attaching the ISR and starting the timer in the setup function:
 
 	```C++
-	sampleTimer->setOverflow(22000, HERTZ_FORMAT);
-	sampleTimer->attachInterrupt(sampleISR);
-	sampleTimer->resume();
+	sampleTimer.setOverflow(22000, HERTZ_FORMAT);
+	sampleTimer.ttachInterrupt(sampleISR);
+	sampleTimer.resume();
 	```
 	 
 	See the [documentation for the timer library](https://github.com/stm32duino/wiki/wiki/HardwareTimer-library) for more information.
@@ -398,8 +397,8 @@ We will separate these two processes into different tasks by creating a thread t
 	
 > [!IMPORTANT]
 > 
-> Your code will not run if you include `STM32FreeRTOS.h` but you don't start the scheduler.
-> Initialise everything else before starting the scheduler.
+> Your code will not run if you include STM32duino FreeRTOS as a library dependency but you don't start the scheduler.
+> Initialise everything else before starting the scheduler with `vTaskStartScheduler()`.
 
 4.	The thread will need to execute at a constant rate, which will be the sample rate of our keyboard.
 	We can use the RTOS function `vTaskDelayUntil()` to do this — it blocks execution until a certain time has passed since the last time the function was completed.
