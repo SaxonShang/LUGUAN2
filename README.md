@@ -1,5 +1,5 @@
-# Music Synthesizer by Team SPACEY
-## 2024 Embedded Systems Coursework 2
+# Music Synthesizer by Team LUGUAN
+## 2025 Embedded Systems Coursework 2
 
 **Demo Video:** [Watch Here](https://youtu.be/WAD-bAxjCrM)
 
