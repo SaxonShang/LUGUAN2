@@ -15,8 +15,8 @@
 - Move to the second page if the menu list exceeds the page height.
 - Adjust the state parameter (**On/Off**) using **Knob 2**.
 
-![image](https://github.com/SaxonShang/LUGUAN2/blob/main/doc/MENU2.jpg)
-
+![image](https://github.com/SaxonShang/LUGUAN2/blob/main/doc/MENB2.jpg)
+![image](https://github.com/SaxonShang/LUGUAN2/blob/main/doc/PAGE2.jpg)
 ## Metronome (Met)
 - Provides steady beats for accurate rhythm.
 - Adjust speed with **Knob 3** (*8 levels*).
