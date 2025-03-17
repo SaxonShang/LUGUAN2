@@ -189,69 +189,69 @@ Below is a placeholder for the dependency diagram that illustrates the overall s
 
 ---
 
-## 4. User Manual
+## LUGUAN Keyboard User Manual
 
-### LUGUAN Synthesizer User Manual
+![image](https://github.com/SaxonShang/LUGUAN2/blob/main/doc/MENU.jpg)
 
-![sPACE](sPACE)
+### Home Page
+1. **Menu:** Press **Knob 1** to open the menu page.
+2. **Waveform Selection:** Choose from seven waveform types: *Sawtooth, Sine, Square, Triangle, Saxophone, Piano, and Bell*. Rotate **Knob 2** to switch.
+3. **Octave Control:** Adjust the octave for the master board; slave boards follow accordingly. Use **Knob 3**.
+4. **Volume Adjustment:** Increase or decrease volume by rotating **Knob 4** clockwise (*Level 1: Lowest, Level 8: Highest*).
 
-#### Home Page
-1. **Menu:**  
-   Press **Knob 1** to open the menu page.
-2. **Waveform Selection:**  
-   Choose from seven waveform types: sawtooth, sine, square, triangle, saxophone, piano, and bell by rotating **Knob 2**.
-3. **Tone Control:**  
-   Set the master board’s octave using **Knob 3**; slave boards adjust accordingly.
-4. **Volume Control:**  
-   Increase volume by rotating **Knob 4** clockwise (Volume 1 is the lowest; Volume 8 is the highest).
+### Menu Page
+- Use the **joystick** to navigate through features.
+- Press the **joystick** to select a feature.
+- Press the **joystick** again to return to the menu page.
+- Move to the second page if the menu list exceeds the page height.
+- Adjust the state parameter (**On/Off**) using **Knob 2**.
 
-#### Menu Page
-- Navigate between features using the **joystick**.
-- Press the joystick to select a feature.
-- Adjust settings with **Knob 2**.
+![image](https://github.com/SaxonShang/LUGUAN2/blob/main/doc/MENB2.jpg)
+![image](https://github.com/SaxonShang/LUGUAN2/blob/main/doc/PAGE2.jpg)
+### Metronome (Met)
+- Provides steady beats for accurate rhythm.
+- Adjust speed with **Knob 3** (*8 levels*).
 
-#### Metronome (Met)
-- Provides a steady beat for rhythm accuracy.
-- Adjust metronome speed using **Knob 3** (8 levels).
+![image](https://github.com/SaxonShang/LUGUAN2/blob/main/doc/MET.jpg)
 
-#### Fade
-- Controls sound sustain and fade effects.
-- Adjust sustain time with **Knob 3** and fade speed with **Knob 4**.
+### Fade
+- Holds sound for a set duration, controlling sustain time and fade speed.
+- Adjust **sustain time** with **Knob 3**.
+- Adjust **fade speed** with **Knob 4**.
 
-#### Low Frequency Oscillator (LFO)
-- Adds a low-frequency sine wave for natural sound modulation.
-- Adjust LFO frequency with **Knob 3** and LFO volume with **Knob 4**.
+![image](https://github.com/SaxonShang/LUGUAN2/blob/main/doc/FADE.jpg)
 
-#### ADSR Envelope
-- Modifies tone amplitude using attack, decay, sustain, and release parameters.
-- Set these parameters using **Knobs 2, 3,** and **4** respectively.
+### Low Frequency Oscillator (LFO)
+- Adds a **low-frequency sine wave** for natural sound modulation.
+- Adjust **frequency** with **Knob 3**.
+- Adjust **LFO volume** with **Knob 4**.
 
-#### Low Pass Filter (LPF)
-- Removes high-frequency components for smoother tone quality.
-- Set the cutoff frequency with **Knob 3** (range: 500Hz to 2000Hz).
+![image](https://github.com/SaxonShang/LUGUAN2/blob/main/doc/OCI.jpg)
 
----
+### ADSR (Attack, Decay, Sustain, Release)
+- Modifies tone amplitude over time.
+- Adjust **Attack** using **Knob 2**.
+- Adjust **Decay** using **Knob 3**.
+- Adjust **Sustain** using **Knob 4**.
 
-## 5. Additional Notes
+![image](https://github.com/SaxonShang/LUGUAN2/blob/main/doc/ADSR.jpg)
 
-- **Task Execution Testing:**  
-  Worst-case scenarios for each task are documented in the source (refer to `testfunc.h`) to ensure all tasks meet their deadlines.
+### Low Pass Filter (LPF)
+- Filters out high-frequency sounds for a smoother tone.
+- Adjust **cutoff frequency** (*500Hz - 2000Hz*) using **Knob 3**.
 
-- **Priority Adjustments:**  
-  If tasks do not perform as expected (e.g., missed data in DecodeTask or display lags), consult the established priority order and synchronization mechanisms.
+![image](https://github.com/SaxonShang/LUGUAN2/blob/main/doc/LPF.jpg)
 
-- **Extensibility:**  
-  With the current CPU utilisation at 87%, there is headroom for additional features. Any enhancements must preserve core functionality and allow restoration via the user interface or system reset.
+### Effect
+- Rotate **Knob 2** to select an effect.
+- Press **Knob 2** to enable the selected effect.
+- Adjust the effect level using **Knob 3**.
 
-- **Timing Analysis Recap:**  
-  Detailed timing measurements indicate that while BackgroundCalcTask is the most demanding—especially under extreme worst-case conditions (e.g., 48 keys pressed across 4 boards)—such scenarios are rare. A more typical worst-case (all keys pressed on one board with minimal effects enabled) results in 68.2% CPU usage for that task, contributing to an overall CPU load of 87%.
+The image below shows the page of effect in 3 effect mode
+![image](https://github.com/SaxonShang/LUGUAN2/blob/main/doc/EFF.jpg)
+![image](https://github.com/SaxonShang/LUGUAN2/blob/main/doc/DIS.jpg)
+![image](https://github.com/SaxonShang/LUGUAN2/blob/main/doc/CHO.jpg)
 
-- **CAN_TX Timing Consideration:**  
-  Timing for CAN_TX was measured both with and without the physical propagation delay (minimum 0.7ms). The values excluding the propagation delay are used in final CPU utilisation calculations.
-
-- **Reordering Task Priorities:**  
-  Based on the analysis, tasks are prioritized (from highest to lowest) as follows:  
-  **ScanKeysTask (6) > DecodeTask (5) > BackgroundCalcTask (4) > CAN_TX_Task (3) > DisplayUpdateTask (2) > ScanJoystickTask (1)**  
-  Correct priority settings are crucial for ensuring timely execution and system stability.
+This manual provides an overview of the *LUGUAN Keyboard* functions, making it easy to navigate and customize your sound. Enjoy your music creation! 🎵
 
 ---
