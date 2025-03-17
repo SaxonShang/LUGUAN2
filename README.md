@@ -255,27 +255,3 @@ The image below shows the page of effect in 3 effect mode
 This manual provides an overview of the *LUGUAN Keyboard* functions, making it easy to navigate and customize your sound. Enjoy your music creation! 🎵
 
 ---
-
-## 5. Additional Notes
-
-- **Task Execution Testing:**  
-  Worst-case scenarios for each task are documented in the source (refer to `testfunc.h`) to ensure all tasks meet their deadlines.
-
-- **Priority Adjustments:**  
-  If tasks do not perform as expected (e.g., missed data in DecodeTask or display lags), consult the established priority order and synchronization mechanisms.
-
-- **Extensibility:**  
-  With the current CPU utilisation at 87%, there is headroom for additional features. Any enhancements must preserve core functionality and allow restoration via the user interface or system reset.
-
-- **Timing Analysis Recap:**  
-  Detailed timing measurements indicate that while BackgroundCalcTask is the most demanding—especially under extreme worst-case conditions (e.g., 48 keys pressed across 4 boards)—such scenarios are rare. A more typical worst-case (all keys pressed on one board with minimal effects enabled) results in 68.2% CPU usage for that task, contributing to an overall CPU load of 87%.
-
-- **CAN_TX Timing Consideration:**  
-  Timing for CAN_TX was measured both with and without the physical propagation delay (minimum 0.7ms). The values excluding the propagation delay are used in final CPU utilisation calculations.
-
-- **Reordering Task Priorities:**  
-  Based on the analysis, tasks are prioritized (from highest to lowest) as follows:  
-  **ScanKeysTask (6) > DecodeTask (5) > BackgroundCalcTask (4) > CAN_TX_Task (3) > DisplayUpdateTask (2) > ScanJoystickTask (1)**  
-  Correct priority settings are crucial for ensuring timely execution and system stability.
-
----
