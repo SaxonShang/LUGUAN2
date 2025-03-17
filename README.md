@@ -183,7 +183,6 @@ The following table summarizes each task's dependency on the shared data objects
 ### Dependency Diagram
 
 Below is a placeholder for the dependency diagram that illustrates the overall structure.  
-*(Replace "sPACE" with the correct image as needed.)*
 
 ![sPACE](https://github.com/SaxonShang/LUGUAN2/blob/main/doc/keyboard.drawio%20(1).png)
 
