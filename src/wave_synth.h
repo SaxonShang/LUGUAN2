@@ -1,38 +1,38 @@
 #include <math.h>
 #include <stdlib.h>
 #include <pin_definitions.h>
+#include "effect.h"  // **Include effect.h to apply audio effects**
 
-#define SAMPLE_RATE 22000
-#define AMPLITUDE 0.5
-#define TABLE_SIZE 256
-#define PI M_PI
+#define SAMPLE_RATE 22000  // **Sampling rate for audio synthesis**
+#define AMPLITUDE 0.5      // **Base amplitude for audio signals**
+#define TABLE_SIZE 256     // **Size of the lookup table for waveform generation**
+#define PI M_PI            // **Define PI using math.h**
 
-
-// ADSR envelope parameters
+// ADSR envelope parameters (Attack, Decay, Sustain, Release)
 float attack_time = 0.1;
 float decay_time = 0.2;
 float sustain_level = 0.6;
 float release_time = 0.4;
 
 // Filter parameters
-float filter_cutoff = 0.5;
-float filter_resonance = 0.2;
-float filter_env_amount = 2;
+float filter_cutoff = 0.5;        // **Cutoff frequency for the filter**
+float filter_resonance = 0.2;     // **Resonance level of the filter**
+float filter_env_amount = 2;      // **Amount of filter envelope applied**
 
-// LFO parameters for pitch modulation
-float lfo_frequency = 5.0;
-float lfo_depth = 0.01;
+// LFO (Low-Frequency Oscillator) parameters for pitch modulation
+float lfo_frequency = 5.0;   // **LFO frequency in Hz**
+float lfo_depth = 0.01;      // **Depth of LFO modulation**
 
 // Noise parameters
-float noise_level = 0.1;
-float noise_filter_cutoff = 0.8;
+float noise_level = 0.1;          // **Amplitude level of noise**
+float noise_filter_cutoff = 0.8;  // **Filter cutoff for noise**
 
+// Precompute filter parameters to optimize performance
+float dt = 1.0f / SAMPLE_RATE;
+float prevcutoffFreq = 500;
+float rc = 1.0f / (2.0f * M_PI * 500);
+float alpha = dt / (rc + dt);  // **Precomputed filter coefficient**
 
-
-float dt=1.0f / SAMPLE_RATE;
-float prevcutoffFreq=500;
-float rc=1.0f / (2.0f * M_PI * 500);
-float alpha= dt / (rc + dt); // added to reduce excution time
 float lowPassFilter(float cur, float prev, float cutoffFreq) {
     if (prevcutoffFreq!=cutoffFreq){
         rc = 1.0f / (2.0f * M_PI * cutoffFreq);
@@ -46,6 +46,7 @@ float lowPassFilter(float cur, float prev, float cutoffFreq) {
     return  prev + alpha * (cur - prev);
 }
 
+// Bhaskara approximation for sine wave (less accurate but computationally efficient)
 float bhaskaraSin(float x) {
     float numerator = 16 * x * (PI - x);
     float denominator = 5 * PI * PI - 4 * x * (PI - x);
@@ -84,6 +85,10 @@ float generateLFO(int reduceVal,float lfoFreq){
     
 
     float amp=getSample(lfoPhase,&LFOAcc,sineTable)/reduceVal;
+    
+
+
+
     return amp;
 }
 
@@ -150,31 +155,29 @@ int adsrGeneral(int pressedCount){
     }
 }
 
-int adsrHorn(int pressedCount){
-    int lowtime=3; 
-    // int hightime;
-    int lowval=2;
-    int highval=-2;
-    int loopduration=20;
-    static int countlow=0;
-    static int counthigh=0;
-    if ((pressedCount%loopduration)<=lowtime){
-        counthigh=0;
-        if (countlow<lowval){
-            
-            countlow+=1;
+// ADSR envelope for horn-like sounds
+int adsrHorn(int pressedCount) {
+    int lowtime = 3;
+    int lowval = 2;
+    int highval = -2;
+    int loopduration = 20;
+    static int countlow = 0;
+    static int counthigh = 0;
+    if ((pressedCount % loopduration) <= lowtime) {
+        counthigh = 0;
+        if (countlow < lowval) {
+            countlow += 1;
         }
         return countlow;
-    }
-    else{
-        countlow=0;
-        if (counthigh>highval){
-            counthigh-=1;
+    } else {
+        countlow = 0;
+        if (counthigh > highval) {
+            counthigh -= 1;
         }
         return counthigh;
     }
-    
 }
+
 // u_int32_t calcPianoVout(float Amp,int volume, int i){
 //     // Amp+=generateLFO(2);
 //     uint32_t Vout = static_cast<uint32_t>(Amp *127) - 128;
@@ -215,23 +218,17 @@ void presssedTimeCount(){
     }
 }
 
-u_int32_t addEffects(float amp, int volume, int i){
-    
-    int vshift=0;
-    bool fadeon=__atomic_load_n(&settings.fade.on,__ATOMIC_RELAXED);
-    bool adsron=__atomic_load_n(&settings.adsr.on, __ATOMIC_RELAXED);
-    if (fadeon){
-        int sustainTime=__atomic_load_n(&settings.fade.sustainTime, __ATOMIC_RELAXED);
-        int fadeSpeed=__atomic_load_n(&settings.fade.fadeSpeed, __ATOMIC_RELAXED);
-        int pc=notes.notes[i].pressedCount;
-        vshift=calcFade(pc,sustainTime,fadeSpeed);
+// Apply effects (fade, ADSR) to sound output
+u_int32_t addEffects(float amp, int volume, int i) {
+    int vshift = 0;
+    bool fadeon = __atomic_load_n(&settings.fade.on, __ATOMIC_RELAXED);
+    bool adsron = __atomic_load_n(&settings.adsr.on, __ATOMIC_RELAXED);
+    if (fadeon) {
+        vshift = calcFade(notes.notes[i].pressedCount, settings.fade.sustainTime, settings.fade.fadeSpeed);
+    } else if (adsron) {
+        vshift = adsrGeneral(notes.notes[i].pressedCount);
     }
-    else if (adsron){
-        int pc=notes.notes[i].pressedCount;
-        vshift=adsrGeneral(pc);
-    }
-    u_int32_t Vout=calcVout(amp, volume,vshift);
-    return Vout;
+    return calcVout(amp, volume, vshift);
 }
 u_int32_t addLFO(float amp,int volume){
     bool lfoon=__atomic_load_n(&settings.lfo.on, __ATOMIC_RELAXED);

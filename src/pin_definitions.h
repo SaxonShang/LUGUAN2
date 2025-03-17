@@ -44,7 +44,7 @@ std::string movement;
 
 std::string bottomBar_menu[4] = {"Menu", "Wave", "Tone", "Vol"};
 std::string waveNames[9] = {"Saw", "Sin", "Squ", "Tri", "Pia", "Saxo", "Bell", "Alar", "None"};
-std::string menu_first_level[6] = {"Met", "Fade", "LFO", "ADSR", "LPF", "exit"};
+std::string menu_first_level[7] = {"Met", "Fade", "LFO", "ADSR", "LPF", "effect", "exit"};
 
 struct knob{
   int current_knob_value = 8;
@@ -114,6 +114,13 @@ struct setting{
   int tune;
   int waveIndex;
   SemaphoreHandle_t mutex;  
+  int effectType = 0;
+  bool reverb_on = false;
+  int reverb_strength = 150;
+  bool distortion_on = false;
+  int distortion_strength = 150;
+  bool chorus_on = false;
+  int chorus_strength = 150;
 }settings;
 
 // Row select and enable

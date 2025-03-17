@@ -10,7 +10,6 @@ void setRow(uint8_t rowIdx){
   digitalWrite(RA2_PIN, rowIdx & 0x04);
   digitalWrite(REN_PIN,HIGH);
 }
-
 std::bitset<4> readCols(int rowId){
   setRow(rowId);
   delayMicroseconds(3);

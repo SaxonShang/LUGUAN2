@@ -8,7 +8,8 @@
 #include "wave_synth.h"
 #include "menu.h"
 #include "testfunc.h"
-
+#include "effect.h"
+// Writes the calculated sample value into the active buffer
 void writeToSampleBuffer(uint32_t Vout, uint32_t writeCtr){
   if (writeBuffer1){
                 sampleBuffer1[writeCtr] = Vout;
@@ -17,7 +18,7 @@ void writeToSampleBuffer(uint32_t Vout, uint32_t writeCtr){
                 sampleBuffer0[writeCtr] = Vout ;
             }
 }
-
+// Background calculation task for audio processing
 void backgroundCalcTask(void * pvParameters){
   static float prevfloatAmp=0;
   while(1){
@@ -39,47 +40,56 @@ void backgroundCalcTask(void * pvParameters){
               float Amp=calcSawtoothAmp(&notes.notes[i].floatPhaseAcc,vol_knob_value,i);
               // u_int32_t Vout=
               floatAmp+=addEffects(Amp,vol_knob_value,i);
+              floatAmp= applyEffects(floatAmp);
 
             }
             else if(version_knob_value==7){//sin wave
               float Amp=getSample(notePhases[i],&notes.notes[i].floatPhaseAcc,sineTable);
               floatAmp+=addEffects(Amp,vol_knob_value,i);
+              floatAmp= applyEffects(floatAmp);
             }
             else if(version_knob_value==6){//square wave
               // floatAmp+=getSample(notePhases[i],&notes.notes[i].floatPhaseAcc,squareTable);
               float Amp=getSample(notePhases[i],&notes.notes[i].floatPhaseAcc,squareTable);
               floatAmp+=addEffects(Amp,vol_knob_value,i);
+              floatAmp= applyEffects(floatAmp);
             }
             else if(version_knob_value==5){//triangle wave
               // floatAmp+=getSample(notePhases[i],&notes.notes[i].floatPhaseAcc,triangleTable);
               float Amp=getSample(notePhases[i],&notes.notes[i].floatPhaseAcc,triangleTable);
               floatAmp+=addEffects(Amp,vol_knob_value,i);
+              floatAmp= applyEffects(floatAmp);
             }
             else if(version_knob_value==4){//piano
               // floatAmp+=getSample(notePhases[i],&notes.notes[i].floatPhaseAcc,pianoTable);
               float Amp=getSample(notePhases[i],&notes.notes[i].floatPhaseAcc,pianoTable);
               floatAmp+=addEffects(Amp,vol_knob_value,i);
+              floatAmp= applyEffects(floatAmp);
 
             }
             else if(version_knob_value==3){//saxophone
               // floatAmp+=getSample(notePhases[i],&notes.notes[i].floatPhaseAcc,saxophoneTable);
               float Amp=getSample(notePhases[i],&notes.notes[i].floatPhaseAcc,saxophoneTable);
               floatAmp+=addEffects(Amp,vol_knob_value,i);
+              floatAmp= applyEffects(floatAmp);
             }
             else if(version_knob_value==2){//bell
               // floatAmp+=getSample(notePhases[i],&notes.notes[i].floatPhaseAcc,bellTable);
               float Amp=getSample(notePhases[i],&notes.notes[i].floatPhaseAcc,bellTable);
               floatAmp+=addEffects(Amp,vol_knob_value,i);
+              floatAmp= applyEffects(floatAmp);
             }
             else if(version_knob_value==1){//alarm
              
               float amp=getSample(notePhases[i],&notes.notes[i].floatPhaseAcc, squareTable);
               floatAmp+=calcHornVout(amp,vol_knob_value,i);
               floatAmp+=addEffects(amp,vol_knob_value,i);
+              floatAmp= applyEffects(floatAmp);
               
             }
             else{ //random
               floatAmp+=getSample(notePhases[i],&notes.notes[i].floatPhaseAcc,dongTable);
+              floatAmp= applyEffects(floatAmp);
             }
 
           }
@@ -98,7 +108,7 @@ void backgroundCalcTask(void * pvParameters){
             writeCtr+=1;
           }
     }
-    
+    vTaskDelay(1);  // 让出 CPU
   }
 
 }
@@ -298,9 +308,27 @@ void scanJoystickTask(void * pvParameters) {
     }
     else if (joystickY - origin > deadZone){
       current_movement = "down";
+    if (selected_option < total_menu_items - 1) {
+                selected_option++;
+
+                // **确保滚动菜单**
+                if ((selected_option * ITEM_SPACING) >= (menu_offset + PAGE_HEIGHT)) {
+                    menu_offset += ITEM_SPACING;
+                }
+            }
+
     }
     else if (joystickY - origin < -deadZone){
       current_movement = "up";
+
+   if (selected_option > 0) {
+                selected_option--;
+
+                // **确保菜单不会超出顶部**
+                if ((selected_option * ITEM_SPACING) < menu_offset) {
+                    menu_offset = std::max(0, menu_offset - ITEM_SPACING);
+                }
+            }
     }
 
     if (current_movement != previous_movement && current_movement == "origin"){
@@ -455,6 +483,9 @@ void displayUpdateTask(void * pvParameters) {
       xSemaphoreTake(sysState.mutex, portMAX_DELAY);
       
       xSemaphoreTake(settings.mutex, portMAX_DELAY);
+
+
+
       if(sysState.knobValues[0].clickState){
         u8g2.setFont(u8g2_font_6x10_tr);
         if (movement == "down"){
@@ -469,31 +500,90 @@ void displayUpdateTask(void * pvParameters) {
         else if (movement == "left"){
           index -= 1;
         }
-        index = constrain(index, 0, 5);
+        index = constrain(index, 0, 6);
 
-        for (int i = 0; i < 6; i++){
-          if (i< 3){
-            u8g2.drawStr(10 + 35 * i, 14, menu_first_level[i].c_str());
-          }
-          else{
-            u8g2.drawStr(10 + 35 * (i-3), 25, menu_first_level[i].c_str());
-          }
-          if (index == i){
-            int x_pos = (i < 3) ? 10 + 35 * i : 10 + 35 * (i-3);
-            int y_pos = (i < 3) ? 5 : 15;
-            u8g2.drawFrame(x_pos-3, y_pos, 32, 12);
-          }
+        if ((index * ITEM_SPACING) >= (menu_offset + PAGE_HEIGHT)) {
+            menu_offset += ITEM_SPACING;
+        } else if ((index * ITEM_SPACING) < menu_offset) {
+            menu_offset -= ITEM_SPACING;
         }
 
+        // for (int i = 0; i < 7; i++){
+        //   if (i< 3){
+        //     u8g2.drawStr(10 + 35 * i, 14, menu_first_level[i].c_str());
+        //   }
+        //   else{
+        //     u8g2.drawStr(10 + 35 * (i-3), 25, menu_first_level[i].c_str());
+        //   }
+        //   if (index == i){
+        //     int x_pos = (i < 3) ? 10 + 35 * i : 10 + 35 * (i-3);
+        //     int y_pos = (i < 3) ? 5 : 15;
+        //     u8g2.drawFrame(x_pos-3, y_pos, 32, 12);
+        //   }
+        // }
+        for (int i = 0; i < 7; i++) {
+            int x_pos, y_pos;
+
+            if (i < 3) {  // 第一行
+                x_pos = 10 + 35 * i;
+                y_pos = 14;
+            } 
+            else if (i < 6) {  // 第二行
+                x_pos = 10 + 35 * (i - 3);
+                y_pos = 25;
+            } 
+            else {  // 第三行（只有一个 "Effect" 选项）
+                x_pos = 10 + 35;  // 让 Effect 置于中间
+                y_pos = 36;
+            }
+
+              if (index == 6) {  
+                  if (menu_offset < ITEM_SPACING * 2) {
+                      menu_offset += 2;  // **缓慢滑动**
+                  }
+              } else if (index != 6) {
+                  menu_offset = 0;  // **缓慢回到默认位置**
+              }
+            // 绘制菜单项
+            // u8g2.drawStr(x_pos, y_pos, menu_first_level[i].c_str());
+
+            // 高亮选中的菜单项
+            // if (index == i) {
+            //   if (index == 6) {  // 选中了 effect block
+            //     if ((index * ITEM_SPACING) >= (menu_offset + PAGE_HEIGHT - ITEM_SPACING)) {
+            //         menu_offset = (index * ITEM_SPACING) - (PAGE_HEIGHT - ITEM_SPACING); 
+            //     }
+            // } else {
+            //     // 确保菜单不会超出顶部
+            //     if ((index * ITEM_SPACING) < menu_offset) {
+            //         menu_offset = std::max(0, menu_offset - ITEM_SPACING);
+            //     }
+            // }
+            //     u8g2.drawFrame(x_pos - 3, y_pos - 9, 32, 12);
+            // }
+          int final_y_pos = y_pos - menu_offset;
+
+    // **如果在可见区域，才绘制**
+          if (final_y_pos >= 10 && final_y_pos < PAGE_HEIGHT + 10) {
+              u8g2.setCursor(x_pos, final_y_pos);
+              u8g2.print(menu_first_level[i].c_str());
+
+        // 高亮选中的菜单项
+        if (index == i) {
+            u8g2.drawFrame(x_pos - 3, final_y_pos - 9, 32, 12);
+        }
+          }
+
+        }
         if (sysState.joystickState){
           menu(index, settings);
         }
       }
       else{
         sysState.currentMenu = "Main";
-        u8g2.setCursor(45, 10);
+        u8g2.setCursor(15, 10);
         u8g2.setFont(u8g2_font_ncenB08_tr);
-        u8g2.print("SpaceY");
+        u8g2.print("LUGUAN Keyboard");
         u8g2.setFont(u8g2_font_5x8_tr);
         for (int i = 0; i < 4; i++){
           u8g2.drawFrame(8+30*i, 20, 25, 20);
@@ -728,8 +818,9 @@ void setup() {
   set_pin_directions();
   set_notes();
   init_settings();
-
+  
   initial_display();
+  initEffects();
 
   TIM_TypeDef *Instance = TIM1;
   HardwareTimer *sampleTimer = new HardwareTimer(Instance);
@@ -810,7 +901,7 @@ void setup() {
   "CAN_TX",		/* Text name for the task */
   256 ,      		/* Stack size in words, not bytes */
   NULL,			/* Parameter passed into the task */
-  4,			/* Task priority */
+  3,			/* Task priority */
   &CAN_TX_Handle );	/* Pointer to store the task handle */
 
   notes.mutex = xSemaphoreCreateMutex();
