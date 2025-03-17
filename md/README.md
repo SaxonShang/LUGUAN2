@@ -1,17 +1,16 @@
 # LUGUAN Synthesizer: Comprehensive Documentation and User Manual
 
-This document consolidates all aspects of the LUGUAN Synthesizer project into a single README. It covers task identification, timing and scheduling analysis, shared data structures and inter-task dependencies, as well as user instructions and additional notes.
+This document consolidates all aspects of the LUGUAN Synthesizer project into a single README. It covers task identification, timing analysis and CPU utilisation, shared data structures with inter-task dependencies, as well as user instructions and additional notes.
 
 ---
 
 ## Table of Contents
 
 1. [Task Identification and Implementation](#task-identification-and-implementation)
-2. [Task Characterisation and Timing Analysis](#task-characterisation-and-timing-analysis)
-3. [Critical Instant Analysis and CPU Utilisation](#critical-instant-analysis-and-cpu-utilisation)
-4. [Shared Data Structures, Synchronisation, and Inter-Task Dependencies](#shared-data-structures-synchronisation-and-inter-task-dependencies)
-5. [User Manual](#user-manual)
-6. [Additional Notes](#additional-notes)
+2. [Timing Analysis and CPU Utilisation](#timing-analysis-and-cpu-utilisation)
+3. [Shared Data Structures, Synchronisation, and Inter-Task Dependencies](#shared-data-structures-synchronisation-and-inter-task-dependencies)
+4. [User Manual](#user-manual)
+5. [Additional Notes](#additional-notes)
 
 ---
 
@@ -61,21 +60,9 @@ This document consolidates all aspects of the LUGUAN Synthesizer project into a 
 
 ---
 
-## 2. Task Characterisation and Timing Analysis
+## 2. Timing Analysis and CPU Utilisation
 
-Each task is characterised by its theoretical minimum initiation interval and its worst-case execution time. These metrics are essential for ensuring that all real-time deadlines are met.
-
-- **Theoretical Initiation Intervals:**  
-  Defined by system requirements (e.g., ScanKeysTask runs every 20ms, DisplayUpdateTask every 100ms).
-
-- **Measured Execution Times:**  
-  Derived from extensive testing (refer to `testfunc.h` for details on worst-case scenarios).
-
----
-
-## 3. Critical Instant Analysis and CPU Utilisation
-
-The following table summarizes the worst-case execution times, initiation intervals, and CPU usage contributions of each task:
+The following table summarizes the worst-case execution times, initiation intervals, and CPU usage contributions of each task. These values capture both the theoretical and measured performance of the system:
 
 | Task No | Task                                   | Execution Time T<sub>i</sub> (ms) | Initiation Time τ<sub>i</sub> (ms) | T<sub>i</sub>/τ<sub>i</sub> | CPU Usage Contribution |
 |---------|----------------------------------------|-----------------------------------|------------------------------------|-----------------------------|------------------------|
@@ -90,26 +77,26 @@ The following table summarizes the worst-case execution times, initiation interv
 **Detailed Analysis:**
 
 - **Overall CPU Usage:**  
-  The CPU utilisation is approximately **87%**, calculated using worst-case scenarios for all tasks, including certain IRQs (e.g., CAN_RX IRQ) that are minimal due to their short execution paths.
+  The CPU utilisation is approximately **87%**, based on worst-case scenarios for all tasks, including minimal contributions from IRQs (e.g., CAN_RX IRQ).
 
-- **Task Performance:**  
-  - The **BackgroundCalcTask** is the most demanding due to its comprehensive waveform computations. In an extreme worst-case (e.g., 48 keys pressed across 4 boards with all features enabled), execution time would be significantly higher; however, such scenarios are very rare.
-  - A typical worst-case (all keys pressed on one board with minimal effects enabled) results in 68.2% CPU usage for that task.
-  - Tasks like **DecodeTask** are extremely fast as they rely mainly on combinational logic.
+- **Task Performance Insights:**  
+  - The **BackgroundCalcTask** is the most demanding, as it computes waveform amplitudes for all pressed keys and applies additional audio effects. In extreme worst-case conditions (e.g., 48 keys pressed across 4 boards with all features enabled), its execution time would be much higher; however, such scenarios are very rare.
+  - A typical worst-case scenario (all keys pressed on one board with minimal effects enabled) results in 68.2% CPU usage for BackgroundCalcTask.
+  - Fast tasks like **DecodeTask** rely primarily on combinational logic, ensuring minimal execution time.
 
 - **CAN_TX Timing:**  
-  Initial timing measurements for CAN_TX included the physical propagation delay (minimum 0.7ms). Since this delay does not consume CPU time, later measurements excluded it for accurate CPU usage calculation.
+  Initial measurements of CAN_TX included a physical propagation delay (minimum 0.7ms). Since this delay does not consume CPU cycles, the final measurements exclude it to provide an accurate reflection of CPU usage.
 
 - **Priority Reordering:**  
-  Based on the analysis, tasks have been reprioritized (from highest to lowest) as follows:  
+  The analysis led to a reordering of task priorities (from highest to lowest):  
   **ScanKeysTask (6) > DecodeTask (5) > BackgroundCalcTask (4) > CAN_TX_Task (3) > DisplayUpdateTask (2) > ScanJoystickTask (1)**  
-  Correct priority settings are crucial to ensure timely execution and to prevent issues such as missed data or display malfunctions.
+  Correct priority settings are essential to prevent issues such as missed data transfers or display lag.
 
 ---
 
-## 4. Shared Data Structures and Dependencies
+## 3. Shared Data Structures, Synchronisation, and Inter-Task Dependencies
 
-This section outlines the global data objects used across tasks, the mechanisms in place to protect these shared resources, and details the data flows and dependencies between tasks.
+This section outlines the global data objects used across tasks, the mechanisms protecting these shared resources, and detailed examples of how data flows between tasks.
 
 ### Global Data Objects
 
@@ -136,55 +123,49 @@ This section outlines the global data objects used across tasks, the mechanisms 
   - **Counting Semaphore for CAN_TX:**  
     Regulates access to the three available CAN transmission mailboxes.
 
-### Inter-Task Dependencies and Detailed Data Flow
-
-The tasks are designed with a unidirectional data flow to minimize the risk of deadlocks. Below are detailed examples of how data flows between tasks:
+### Detailed Inter-Task Data Flow and Dependencies
 
 1. **Knob Input Change and Sound Generation:**
    - **Detection:**  
-     The user rotates a knob, and **ScanKeysTask** detects this change by reading the key matrix and knob signals, updating the `sysState` object.
-   - **CAN Transmission:**  
-     The updated `sysState` triggers the creation of a CAN message. **CAN_TX_Task** picks up this message from the outgoing queue (`msgOutQ`) and transmits it over the CAN bus.
-   - **Message Reception:**  
-     The transmitted message is captured by **CAN_RX_ISR**, which places it into the incoming queue (`msgInQ`).
-   - **Processing:**  
-     **DecodeTask** processes the CAN message and updates the `settings` data structure with the new knob value.
-   - **Sound Generation:**  
-     Finally, **BackgroundCalcTask** uses the updated `settings` to compute new waveform amplitudes, which are then used by **SampleISR** to generate the corresponding audio output.
+     The user rotates a knob, and **ScanKeysTask** reads the change, updating the `sysState` object.
+   - **CAN Message Creation:**  
+     A CAN message is generated based on the updated knob input and queued in `msgOutQ`.
+   - **Transmission & Reception:**  
+     **CAN_TX_Task** sends the message on the CAN bus; **CAN_RX_ISR** captures the message and places it in `msgInQ`.
+   - **Processing & Update:**  
+     **DecodeTask** processes the message, updating the `settings` object with the new knob value.
+   - **Audio Output:**  
+     **BackgroundCalcTask** uses the updated `settings` to compute the new waveform amplitudes, which **SampleISR** then uses to generate the audio output.
 
 2. **Joystick Movement and UI Update:**
    - **Detection:**  
-     When the user moves the joystick, **ScanJoystickTask** detects this movement and updates the `movement` data structure.
-   - **UI Update:**  
-     **DisplayUpdateTask** reads the updated `movement` data and adjusts the user interface accordingly—for example, scrolling through menu items or highlighting selections.
-   - **Further Interaction:**  
-     This flow can also trigger other events, such as refreshing the display or even prompting auto-detection routines if combined with other signals.
+     Movement of the joystick is detected by **ScanJoystickTask**, which updates the `movement` data structure.
+   - **UI Response:**  
+     **DisplayUpdateTask** reads the updated `movement` data and adjusts the user interface (e.g., scrolling menus, highlighting options).
+   - **Further Interactions:**  
+     This data flow can trigger additional routines such as auto-detection or other UI changes.
 
 3. **Auto-Detection at Startup:**
    - **Initialisation:**  
-     During system startup, the **Auto-Detection** function runs to determine the board’s position.
-   - **Data Exchange:**  
-     It exchanges information with adjacent boards using dedicated detection signals (e.g., West/East detection) and CAN messages.
-   - **Configuration Update:**  
-     The results of this auto-detection update `sysState` (and potentially `settings`), ensuring that each board correctly identifies its role (master or slave) in the synthesizer system.
+     On startup, the **Auto-Detection** function determines the board’s position by exchanging signals via dedicated detection lines (West/East) and CAN messages.
+   - **Configuration:**  
+     The auto-detection results update `sysState` (and potentially `settings`), ensuring each board correctly identifies its role in the synthesizer system.
 
 4. **CAN Message Exchange and Data Synchronisation:**
-   - **Routine Operation:**  
-     Various tasks continuously exchange CAN messages to coordinate their functions.
-   - **Transmission and Reception:**  
-     **CAN_TX_Task** sends messages from `msgOutQ` using a counting semaphore to ensure that transmission mailboxes are available, while **CAN_RX_ISR** collects incoming messages into `msgInQ`.
-   - **Processing and Update:**  
-     **DecodeTask** processes these messages and accordingly updates shared data structures (such as `settings` or `sysState`), which then influence subsequent operations in other tasks like BackgroundCalcTask.
+   - **Ongoing Operation:**  
+     Regular CAN message exchanges are handled by **CAN_TX_Task** and **CAN_RX_ISR** with the help of the message queues.
+   - **Data Processing:**  
+     **DecodeTask** processes these messages to update shared data structures, which are then used by other tasks (e.g., BackgroundCalcTask for sound generation).
 
 5. **Waveform Computation and Audio Output:**
-   - **Data Buffering:**  
-     **BackgroundCalcTask** computes waveform amplitudes based on the current key presses and effects settings, using double buffering to ensure continuous data availability.
+   - **Buffering and Computation:**  
+     **BackgroundCalcTask** computes waveform amplitudes based on the current key presses and effect settings, using a double-buffering strategy to ensure continuous data availability.
    - **Audio Generation:**  
-     **SampleISR** retrieves the buffered samples (with access controlled by a semaphore) and uses them to update the audio output via `analogWrite`, ensuring smooth and continuous sound production.
+     **SampleISR** accesses these buffers (with semaphore protection) and uses the samples to drive the audio output via `analogWrite`.
 
 ### Dependencies
 
-The following table summarizes the dependencies of each task on the shared data objects. (Empty cells indicate that the data is not used by that task.)
+The following table summarizes each task's dependency on the shared data objects. (Empty cells indicate the data is not used by that task.)
 
 | Data Name             | sysState   | settings    | movement      | notes         |
 |-----------------------|------------|-------------|---------------|---------------|
@@ -208,7 +189,7 @@ Below is a placeholder for the dependency diagram that illustrates the overall s
 
 ---
 
-## 5. User Manual
+## 4. User Manual
 
 ### LUGUAN Synthesizer User Manual
 
@@ -251,7 +232,7 @@ Below is a placeholder for the dependency diagram that illustrates the overall s
 
 ---
 
-## 6. Additional Notes
+## 5. Additional Notes
 
 - **Task Execution Testing:**  
   Worst-case scenarios for each task are documented in the source (refer to `testfunc.h`) to ensure all tasks meet their deadlines.
@@ -274,5 +255,3 @@ Below is a placeholder for the dependency diagram that illustrates the overall s
   Correct priority settings are crucial for ensuring timely execution and system stability.
 
 ---
-
-*This document consolidates all critical aspects of the LUGUAN Synthesizer project. Please update the image placeholders as needed and refer to the source repository for further development details and troubleshooting.*
