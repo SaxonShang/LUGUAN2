@@ -1,4 +1,4 @@
-# LUGUAN Synthesizer: Comprehensive Documentation and User Manual
+# LUGUAN Synthesizer
 
 This document consolidates all aspects of the LUGUAN Synthesizer project into a single README. It covers task identification, timing and scheduling analysis, shared data structures and inter-task dependencies, as well as user instructions and additional notes.
 
