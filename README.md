@@ -3,6 +3,8 @@
 This document consolidates all aspects of the LUGUAN Synthesizer project into a single README. It covers task identification, timing analysis and CPU utilisation, shared data structures with inter-task dependencies, as well as user instructions and additional notes.
 
 ---
+[![Watch the demo video](https://img.youtube.com/vi/X5l65ZADTuo/hqdefault.jpg)](https://www.youtube.com/watch?v=X5l65ZADTuo)
+
 
 ## Table of Contents
 
