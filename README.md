@@ -185,7 +185,7 @@ The following table summarizes each task's dependency on the shared data objects
 Below is a placeholder for the dependency diagram that illustrates the overall structure.  
 *(Replace "sPACE" with the correct image as needed.)*
 
-![sPACE](https://github.com/SaxonShang/LUGUAN2/blob/main/doc/keyboard.drawio%20(1).png)
+![sPACE](https://github.com/Shiyizhuanshi/ES-synth-starter-Han/assets/105670417/c6b2db20-d41d-4658-b8cd-a84e755536b1)
 
 ---
 
