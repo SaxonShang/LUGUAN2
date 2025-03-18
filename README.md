@@ -67,15 +67,15 @@ This report consolidates all aspects of the LUGUAN Synthesizer project into a si
 
 The following table summarizes the worst-case execution times, initiation intervals, and CPU usage contributions of each task. These values capture both the theoretical and measured performance of the system:
 
-| Task No | Task                                   | Execution Time T<sub>i</sub> (ms) | Initiation Time τ<sub>i</sub> (ms) | T<sub>i</sub>/τ<sub>i</sub> | CPU Usage Contribution |
-|---------|----------------------------------------|-----------------------------------|------------------------------------|-----------------------------|------------------------|
-| 1       | Decode                                 | 0.021                             | 33.6                               | 0.063%                      | 0.063%                  |
-| 2       | CAN_TX                                 | 0.317                             | 100                                | 0.317%                      | 0.317%                  |
-| 3       | Joystick                               | 0.327                             | 100                                | 0.327%                      | 0.327%                  |
-| 4       | Scan Key                               | 0.133                             | 20                                 | 0.665%                      | 0.665%                  |
-| 5       | Display                                | 18.408                            | 100                                | 18.408%                     | 18.408%                  |
-| 6       | Backend (single board)                 | 37.805                            | 50                                 | 75.61%                      | 75.61%                  |
-| **Sum** |                                        |                                   |                                    |                             | **95.39%**                |
+| Task No | Task                                   | Execution Time T<sub>i</sub> (ms) | Initiation Time τ<sub>i</sub> (ms) | CPU Usage Contribution |
+|---------|----------------------------------------|-----------------------------------|------------------------------------|------------------------|
+| 1       | Decode                                 | 0.021                             | 33.6                               | 0.063%                 |
+| 2       | CAN_TX                                 | 0.317                             | 100                                | 0.317%                 |
+| 3       | Joystick                               | 0.327                             | 100                                | 0.327%                 |
+| 4       | Scan Key                               | 0.133                             | 20                                 | 0.665%                 |
+| 5       | Display                                | 18.408                            | 100                                | 18.408%                |
+| 6       | Backend (single board)                 | 37.805                            | 50                                 | 75.61%                 |
+| **Sum** |                                        |                                   |                                    | **95.39%**             |
 
 **Detailed Analysis:**
 
