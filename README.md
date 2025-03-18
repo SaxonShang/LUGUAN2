@@ -80,15 +80,12 @@ The following table summarizes the worst-case execution times, initiation interv
 **Detailed Analysis:**
 
 - **Overall CPU Usage:**  
-  The CPU utilisation is approximately **87%**, based on worst-case scenarios for all tasks, including minimal contributions from IRQs (e.g., CAN_RX IRQ).
+  The CPU utilisation is approximately **95.39%**, based on worst-case scenarios for all tasks, including minimal contributions from IRQs (e.g., CAN_RX IRQ).This means that all built-in functions utilizes nearly all computation power leaving a headroom for about **5%**.
 
 - **Task Performance Insights:**  
   - The **BackendTask** is the most demanding, as it computes waveform amplitudes for all pressed keys and applies additional audio effects. In extreme worst-case conditions (e.g., 48 keys pressed across 4 boards with all features enabled), its execution time would be much higher; however, such scenarios are very rare.
-  - A typical worst-case scenario (all keys pressed on one board with minimal effects enabled) results in 68.2% CPU usage for BackgroundCalcTask.
+  - A typical worst-case scenario (all keys pressed on one board with effects enabled) results in 75.61% CPU usage for Backend processing.
   - Fast tasks like **DecodeTask** rely primarily on combinational logic, ensuring minimal execution time.
-
-- **CAN_TX Timing:**  
-  Initial measurements of CAN_TX included a physical propagation delay (minimum 0.7ms). Since this delay does not consume CPU cycles, the final measurements exclude it to provide an accurate reflection of CPU usage.
 
 - **Priority Reordering:**  
   The analysis led to a reordering of task priorities (from highest to lowest):  
