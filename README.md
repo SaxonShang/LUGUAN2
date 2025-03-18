@@ -1,8 +1,12 @@
 # LUGUAN Synthesizer
 
-This document consolidates all aspects of the LUGUAN Synthesizer project into a single README. It covers task identification, timing analysis and CPU utilisation, shared data structures with inter-task dependencies, as well as user instructions and additional notes.
+This document consolidates all aspects of the LUGUAN Synthesizer project into a single README. It covers task identification, timing analysis and CPU utilisation, shared data structures with inter-task dependencies, as well as user instructions.
 
 ---
+## Check out the demo video
+
+[![Watch the demo video](https://img.youtube.com/vi/X5l65ZADTuo/hqdefault.jpg)](https://www.youtube.com/watch?v=X5l65ZADTuo)
+
 
 ## Table of Contents
 
@@ -182,9 +186,9 @@ The following table summarizes each task's dependency on the shared data objects
   - No deadlocks because the functions that reads to those structs do not have ability to write back to those blocks.
 ### Dependency Diagram
 
-Below is a placeholder for the dependency diagram that illustrates the overall structure.  
+Below is a dependency diagram that illustrates the overall structure.  
 
-![image](https://github.com/SaxonShang/LUGUAN2/blob/main/doc/keyboard.drawio (1).png)
+![image](https://github.com/SaxonShang/LUGUAN2/blob/main/doc/pic.png)
 
 ---
 
