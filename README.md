@@ -13,8 +13,7 @@ This report consolidates all aspects of the LUGUAN Synthesizer project into a si
 1. [Task Identification and Implementation](#task-identification-and-implementation)
 2. [Timing Analysis and CPU Utilisation](#timing-analysis-and-cpu-utilisation)
 3. [Shared Data Structures, Synchronisation, and Inter-Task Dependencies](#shared-data-structures-synchronisation-and-inter-task-dependencies)
-4. [User Manual](#user-manual)
-5. [Additional Notes](#additional-notes)
+4. [User Instruction](#user-instruction)
 
 ---
 
