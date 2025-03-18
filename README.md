@@ -245,7 +245,7 @@ Below is a dependency diagram that illustrates the overall structure.
 ![image](https://github.com/SaxonShang/LUGUAN2/blob/main/doc/LPF.jpg)
 
 ### Effect
-- Rotate **Knob 2** to select an effect.
+- Rotate **Knob 2** to select an effect mode.
 - Press **Knob 2** to enable the selected effect.
 - Adjust the effect level using **Knob 3**.
 
