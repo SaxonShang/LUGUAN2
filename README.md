@@ -74,8 +74,8 @@ The following table summarizes the worst-case execution times, initiation interv
 | 3       | Joystick                               | 0.327                             | 100                                | 0.327%                      | 0.327%                  |
 | 4       | Scan Key                               | 0.133                             | 20                                 | 0.665%                      | 0.665%                  |
 | 5       | Display                                | 18.408                            | 100                                | 18.408%                     | 18.408%                  |
-| 6       | Backend (single board)                 | 34.1                              | 50                                 | 68.2%                       | 68.2%                  |
-| **Sum** |                                        |                                   |                                    |                             | **87%**                |
+| 6       | Backend (single board)                 | 37.805                            | 50                                 | 75.61%                      | 75.61%                  |
+| **Sum** |                                        |                                   |                                    |                             | **95.39%**                |
 
 **Detailed Analysis:**
 
