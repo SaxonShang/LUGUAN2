@@ -59,7 +59,7 @@ This report consolidates all aspects of the LUGUAN Synthesizer project into a si
 
 - **BackendTask**  
   *Type:* Thread  
-  *Description:* Uses double buffering to compute the audio output for pressed keys. It handles polyphony by summing wave amplitudes, applies fade and ADSR envelope effects, injects low-frequency oscillation (LFO), performs low pass filtering (LPF) and adds effect buffers (EFF).
+  *Description:* Uses double buffering to compute the audio output for pressed keys. It handles polyphony by summing wave amplitudes, applies ADSR envelope effects, performs low pass filtering (LPF) and adds multiple effect buffers.
 
 ---
 
@@ -213,20 +213,6 @@ Below is a dependency diagram that illustrates the overall structure.
 
 ![image](https://github.com/SaxonShang/LUGUAN2/blob/main/doc/MET.jpg)
 
-### Fade
-- Holds sound for a set duration, controlling sustain time and fade speed.
-- Adjust **sustain time** with **Knob 3**.
-- Adjust **fade speed** with **Knob 4**.
-
-![image](https://github.com/SaxonShang/LUGUAN2/blob/main/doc/FADE.jpg)
-
-### Low Frequency Oscillator (LFO)
-- Adds a **low-frequency sine wave** for natural sound modulation.
-- Adjust **frequency** with **Knob 3**.
-- Adjust **LFO volume** with **Knob 4**.
-
-![image](https://github.com/SaxonShang/LUGUAN2/blob/main/doc/OCI.jpg)
-
 ### ADSR (Attack, Decay, Sustain, Release)
 - Modifies tone amplitude over time.
 - Adjust **Attack** using **Knob 2**.
@@ -241,15 +227,6 @@ Below is a dependency diagram that illustrates the overall structure.
 
 ![image](https://github.com/SaxonShang/LUGUAN2/blob/main/doc/LPF.jpg)
 
-### Effect
-- Rotate **Knob 2** to select an effect mode.
-- Press **Knob 2** to enable the selected effect.
-- Adjust the effect level using **Knob 3**.
-
-The image below shows the page of effect in 3 effect mode
-![image](https://github.com/SaxonShang/LUGUAN2/blob/main/doc/EFF.jpg)
-![image](https://github.com/SaxonShang/LUGUAN2/blob/main/doc/DIS.jpg)
-![image](https://github.com/SaxonShang/LUGUAN2/blob/main/doc/CHO.jpg)
 
 This manual provides an overview of the *LUGUAN Keyboard* functions, making it easy to navigate and customize your sound. Enjoy your music creation! 🎵
 
