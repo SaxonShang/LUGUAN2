@@ -7,7 +7,6 @@
 #include "pin.h"
 #include "waves.h"
 #include "ui.h"
-#include "test.h"
 #include "effect.h"
 
 // -------------------- Module: Sample Buffer Writer --------------------
@@ -688,104 +687,6 @@ void fillmsgQ() {
   for (int i = 0; i < 60; i++) {
       xQueueSend(msgOutQ, RX_Message, portMAX_DELAY);
   }
-}
-
-// -------------------- Task: Dummy CAN TX Timing Test --------------------
-void time_CAN_TX_Task() {
-  uint8_t msgOut[8];
-  for (int i = 0; i < 60; i++) {
-      xQueueReceive(msgOutQ, msgOut, portMAX_DELAY);
-      // CAN_TX(ID, msgOut);  // Optional for testing
-  }
-}
-
-// -------------------- Function: Measure Worst Case Background Calc Time --------------------
-void backCalcTime() {
-  setWorstcaseBackCalc();
-  uint32_t startTime = micros();
-  for (int i = 0; i < 32; i++) {
-      backgroundCalcTask(NULL);
-  }
-  Serial.println(micros() - startTime);
-}
-
-// -------------------- Function: Measure Worst Case Display Update Time --------------------
-void displayTime() {
-  setWorstcaseDisplay();
-  uint32_t startTime = micros();
-  for (int i = 0; i < 32; i++) {
-      displayUpdateTask(NULL);
-      Serial.println(micros() - startTime);
-  }
-}
-
-// -------------------- Function: Measure Joystick Task Time --------------------
-void joystickTime() {
-  uint32_t startTime = micros();
-  for (int i = 0; i < 32; i++) {
-      scanJoystickTask(NULL);
-      Serial.println(micros() - startTime);
-  }
-}
-
-// -------------------- Function: Measure CAN TX Task Time --------------------
-void canTXtime() {
-  fillmsgQ();
-  uint32_t startTime = micros();
-  for (int i = 0; i < 32; i++) {
-      time_CAN_TX_Task();
-      fillmsgQ();
-  }
-  Serial.println(micros() - startTime);
-}
-
-// -------------------- Function: Measure Key Scan Task Time --------------------
-void scankeyTime() {
-  setWorstCaseScankey();
-  uint32_t startTime = micros();
-  for (int i = 0; i < 32; i++) {
-      scanKeysTask(NULL);
-  }
-  Serial.println(micros() - startTime);
-}
-
-// -------------------- Function: Measure Decode Task Time --------------------
-void decodeTime() {
-  uint32_t startTime = micros();
-  for (int i = 0; i < 32; i++) {
-      decodeTask(NULL);
-  }
-  Serial.println(micros() - startTime);
-}
-
-// -------------------- Function: Test Setup Entry Point --------------------
-void testSetup() {
-  sysState.knobValues[2].current_knob_value = 4;
-  sysState.knobValues[3].current_knob_value = 6;
-
-  Serial.begin(9600);
-  Serial.println("Serial port initialised");
-
-  generatePhaseLUT();
-  set_pin_directions();
-  set_notes();
-  init_settings();
-
-  CAN_Init(true);
-  setCANFilter(0x123, 0x7ff);
-  CAN_RegisterRX_ISR(CAN_RX_ISR);
-  CAN_RegisterTX_ISR(CAN_TX_ISR);
-  CAN_Start();
-
-  // Uncomment to test individually
-  // joystickTime();
-  // displayTime();
-  // scankeyTime();
-  // backCalcTime();
-  canTXtime();
-  // decodeTime();
-
-  while (1) {}  // Keep running
 }
 
 void setup() {
