@@ -5,7 +5,7 @@ This report consolidates all aspects of the LUGUAN Synthesizer project into a si
 ---
 ## Check out the demo video
 
-[![Watch the demo video](https://img.youtube.com/vi/X5l65ZADTuo/hqdefault.jpg)](https://www.youtube.com/watch?v=X5l65ZADTuo)
+[![Watch the demo video](https://img.youtube.com/vi/X5l65ZADTuo/hqdefault.jpg)](https://www.youtube.com/watch?v=E8nPDUOH0bU)
 
 
 ## Table of Contents
