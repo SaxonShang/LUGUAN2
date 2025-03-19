@@ -4,8 +4,10 @@ This report consolidates all aspects of the LUGUAN Synthesizer project into a si
 
 ---
 ## Check out the demo video
-
+1. Function Display
 [![Watch the video](https://img.youtube.com/vi/E8nPDUOH0bU/0.jpg)](https://www.youtube.com/watch?v=E8nPDUOH0bU)
+2. Nice Song played
+[![Watch the video](https://img.youtube.com/vi/A7JH9cY9dsU/0.jpg)](https://www.youtube.com/watch?v=A7JH9cY9dsU)
 
 
 ## Table of Contents
