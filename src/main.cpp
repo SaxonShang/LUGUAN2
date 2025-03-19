@@ -1,3 +1,4 @@
+// -------------------- Include Headers --------------------
 #include <STM32FreeRTOS.h>
 #include <ES_CAN.h>
 #include <cmath>
@@ -9,148 +10,60 @@
 #include "menu.h"
 #include "testfunc.h"
 #include "effect.h"
-// Writes the calculated sample value into the active buffer
+
+// -------------------- Module: Sample Buffer Writer --------------------
+// Write output sample into active sample buffer
 void writeToSampleBuffer(uint32_t Vout, uint32_t writeCtr){
-  if (writeBuffer1){
-                sampleBuffer1[writeCtr] = Vout;
-              }
-            else{
-                sampleBuffer0[writeCtr] = Vout ;
-            }
-}
-// Background calculation task for audio processing
-void backgroundCalcTask(void * pvParameters){
-  static float prevfloatAmp=0;
-  while(1){
-    xSemaphoreTake(sampleBufferSemaphore, portMAX_DELAY);
-    uint32_t writeCtr=0;
-    while( writeCtr < SAMPLE_BUFFER_SIZE/2){
-      int vol_knob_value = settings.volume; 
-      int version_knob_value = 8 - settings.waveIndex;
-      bool hasActiveKey=false;
-      int keynum=0;
-      float floatAmp=0;
-      for (int i=0; i<96;i++){
-        if (writeCtr< SAMPLE_BUFFER_SIZE/2){        
-          bool isactive=__atomic_load_n(&notes.notes[i].active,__ATOMIC_RELAXED);
-          if (isactive){
-            keynum+=1;
-            hasActiveKey=true;
-            if (version_knob_value==8){//sawtooth
-              float Amp=calcSawtoothAmp(&notes.notes[i].floatPhaseAcc,vol_knob_value,i);
-              // u_int32_t Vout=
-              floatAmp+=addEffects(Amp,vol_knob_value,i);
-              floatAmp= applyEffects(floatAmp);
-
-            }
-            else if(version_knob_value==7){//sin wave
-              float Amp=getSample(notePhases[i],&notes.notes[i].floatPhaseAcc,sineTable);
-              floatAmp+=addEffects(Amp,vol_knob_value,i);
-              floatAmp= applyEffects(floatAmp);
-            }
-            else if(version_knob_value==6){//square wave
-              // floatAmp+=getSample(notePhases[i],&notes.notes[i].floatPhaseAcc,squareTable);
-              float Amp=getSample(notePhases[i],&notes.notes[i].floatPhaseAcc,squareTable);
-              floatAmp+=addEffects(Amp,vol_knob_value,i);
-              floatAmp= applyEffects(floatAmp);
-            }
-            else if(version_knob_value==5){//triangle wave
-              // floatAmp+=getSample(notePhases[i],&notes.notes[i].floatPhaseAcc,triangleTable);
-              float Amp=getSample(notePhases[i],&notes.notes[i].floatPhaseAcc,triangleTable);
-              floatAmp+=addEffects(Amp,vol_knob_value,i);
-              floatAmp= applyEffects(floatAmp);
-            }
-            else if(version_knob_value==4){//piano
-              // floatAmp+=getSample(notePhases[i],&notes.notes[i].floatPhaseAcc,pianoTable);
-              float Amp=getSample(notePhases[i],&notes.notes[i].floatPhaseAcc,pianoTable);
-              floatAmp+=addEffects(Amp,vol_knob_value,i);
-              floatAmp= applyEffects(floatAmp);
-
-            }
-            else if(version_knob_value==3){//saxophone
-              // floatAmp+=getSample(notePhases[i],&notes.notes[i].floatPhaseAcc,saxophoneTable);
-              float Amp=getSample(notePhases[i],&notes.notes[i].floatPhaseAcc,saxophoneTable);
-              floatAmp+=addEffects(Amp,vol_knob_value,i);
-              floatAmp= applyEffects(floatAmp);
-            }
-            else if(version_knob_value==2){//bell
-              // floatAmp+=getSample(notePhases[i],&notes.notes[i].floatPhaseAcc,bellTable);
-              float Amp=getSample(notePhases[i],&notes.notes[i].floatPhaseAcc,bellTable);
-              floatAmp+=addEffects(Amp,vol_knob_value,i);
-              floatAmp= applyEffects(floatAmp);
-            }
-            else if(version_knob_value==1){//alarm
-             
-              float amp=getSample(notePhases[i],&notes.notes[i].floatPhaseAcc, squareTable);
-              floatAmp+=calcHornVout(amp,vol_knob_value,i);
-              floatAmp+=addEffects(amp,vol_knob_value,i);
-              floatAmp= applyEffects(floatAmp);
-              
-            }
-            else{ //random
-              floatAmp+=getSample(notePhases[i],&notes.notes[i].floatPhaseAcc,dongTable);
-              floatAmp= applyEffects(floatAmp);
-            }
-
-          }
-          if (i==95 && keynum>0){
-              floatAmp=floatAmp/keynum;
-              floatAmp+=addLFO(floatAmp,vol_knob_value);
-              floatAmp=addLPF(floatAmp,&prevfloatAmp);
-              u_int32_t Vout=static_cast<u_int32_t>(floatAmp);
-              writeToSampleBuffer(Vout, writeCtr);
-              writeCtr+=1;
-            }
-        }
-      }
-      if(!hasActiveKey && writeCtr< SAMPLE_BUFFER_SIZE/2){
-            writeToSampleBuffer(0,writeCtr);
-            writeCtr+=1;
-          }
+    if (writeBuffer1){
+        sampleBuffer1[writeCtr] = Vout;
+    } else {
+        sampleBuffer0[writeCtr] = Vout;
     }
-    vTaskDelay(1);  // 让出 CPU
-  }
+}
 
+
+
+void send_handshake_signal(int stateW, int stateE){
+  setRow(5);
+  delayMicroseconds(3);
+  digitalWrite(OUT_PIN, stateW);
+  delayMicroseconds(3);
+  setRow(6);
+  delayMicroseconds(3);
+  digitalWrite(OUT_PIN, stateE);
+  delayMicroseconds(3);
 }
 
 void sampleISR() {
-  // Serial.println("isr");
   static uint32_t readCtr = 0;
-  static uint32_t metronomeCounter=0;
-  int metronomespeed=__atomic_load_n(&settings.metronome.speed,__ATOMIC_RELAXED);
-  bool metroOn=__atomic_load_n(&settings.metronome.on,__ATOMIC_RELAXED);
-  int posId=__atomic_load_n(& sysState.posId ,__ATOMIC_RELAXED);
-  if (posId == 0 ){
-    if (readCtr == SAMPLE_BUFFER_SIZE/2) {
-      readCtr = 0;
-      writeBuffer1 = !writeBuffer1;
-      presssedTimeCount();
-      xSemaphoreGiveFromISR(sampleBufferSemaphore, NULL);
+  static uint32_t metronomeCounter = 0;
+
+  int metronomeSpeed = __atomic_load_n(&settings.metronome.speed, __ATOMIC_RELAXED);
+  bool metronomeOn = __atomic_load_n(&settings.metronome.on, __ATOMIC_RELAXED);
+  int posId = __atomic_load_n(&sysState.posId, __ATOMIC_RELAXED);
+
+  if (posId == 0) {
+      if (readCtr == SAMPLE_BUFFER_SIZE / 2) {
+          readCtr = 0;
+          writeBuffer1 = !writeBuffer1;
+          presssedTimeCount();
+          xSemaphoreGiveFromISR(sampleBufferSemaphore, NULL);
       }
-    if (metronomespeed!=8 && metronomeCounter>=metronomeTime[7-metronomespeed] && metroOn){ 
-      analogWrite(OUTR_PIN, 255);
-      metronomeCounter=0;
-    }
-    else{
-      if (writeBuffer1){
-        
-        analogWrite(OUTR_PIN, sampleBuffer0[readCtr++]);
-        metronomeCounter+=1;
-        }
-      else{ 
-        analogWrite(OUTR_PIN, sampleBuffer1[readCtr++]);
-        metronomeCounter+=1;
-    }
-    }
-  }
-  else{
-     if (readCtr == SAMPLE_BUFFER_SIZE/2) {
-      readCtr=0;
-      xSemaphoreGiveFromISR(sampleBufferSemaphore, NULL);
-     }
-     else{
-      readCtr++;
-     }
+
+      if (metronomeSpeed != 8 && metronomeCounter >= metronomeTime[7 - metronomeSpeed] && metronomeOn) {
+          analogWrite(OUTR_PIN, 255);
+          metronomeCounter = 0;
+      } else {
+          analogWrite(OUTR_PIN, writeBuffer1 ? sampleBuffer0[readCtr++] : sampleBuffer1[readCtr++]);
+          metronomeCounter++;
+      }
+  } else {
+      if (readCtr == SAMPLE_BUFFER_SIZE / 2) {
+          readCtr = 0;
+          xSemaphoreGiveFromISR(sampleBufferSemaphore, NULL);
+      } else {
+          readCtr++;
+      }
   }
 }
 
@@ -164,292 +77,292 @@ void CAN_TX_ISR (void) {
 	xSemaphoreGiveFromISR(CAN_TX_Semaphore, NULL);
 }
 
-void send_handshake_signal(int stateW, int stateE){
-    setRow(5);
-    delayMicroseconds(3);
-    digitalWrite(OUT_PIN, stateW);
-    delayMicroseconds(3);
-    setRow(6);
-    delayMicroseconds(3);
-    digitalWrite(OUT_PIN, stateE);
-    delayMicroseconds(3);
-}
 
 // reutrn the posId of the board
-int auto_detect_init(){
-  uint8_t detext_RX_Message[8] = {0};  //CAN RX message
-  uint8_t detext_TX_Message[8] = {0};  //CAN RX message
-  uint32_t detect_CAN_ID = 0x123; //CAN ID
-  int wait_count = 300;
-  int ready_board_count = 0;
+int auto_detect_init() {
+  uint8_t detext_RX_Message[8] = {0};   // Message received via CAN
+  uint8_t detext_TX_Message[8] = {0};   // Message to send via CAN
+  uint32_t detect_CAN_ID = 0x123;       // Common CAN ID for detection
+
   std::bitset<28> inputs;
   std::bitset<1> WestDetect;
   std::bitset<1> EastDetect;
-  
+
+  // Display detection screen
   u8g2.clearBuffer();
   u8g2.setFont(u8g2_font_ncenB08_tr);
   u8g2.setCursor(20, 20);
   u8g2.print("Auto Detecting...");
   u8g2.sendBuffer();
-  for (int i = 0; i < 100; i++){
-      send_handshake_signal(1,1);
+
+  // Initial handshake pulse
+  for (int i = 0; i < 100; i++) {
+      send_handshake_signal(1, 1);
       delay(30);
   }
+
+  // Read handshake detection pins
   inputs = readInputs();
   WestDetect = extractBits<28, 1>(inputs, 23, 1);
   EastDetect = extractBits<28, 1>(inputs, 27, 1);
-  delay(2000);
-  //after 3s, sends handshake status to the one board to process
-  //if the board is the most west then it is the main board which needs to 
-  //process the handshake status of the other boards
-  //if not then it is the other boards which need to send the handshake status to the main board
-  if (!WestDetect[0]){
-    Serial.println("west borad detected");
-    // if west detect, waiting for message from the main board
-    do{
-        Serial.println("waiting for main board message!");
-        delay(100);
-        while (CAN_CheckRXLevel())
-        CAN_RX(detect_CAN_ID, detext_RX_Message);
-        Serial.println("RX: ");
-        Serial.print((char)detext_RX_Message[0]);
-        Serial.println(detext_RX_Message[1]);
-    } while (detext_RX_Message[0] !=  'C' && detext_RX_Message[1] != 0);
-    Serial.println("main board message confirmed!");
-    // when main board is determined, set all handshake signals to 0
-    // give time for all boards to receive the handshake signal
-    for (int i = 0; i < 10; i++){
-        send_handshake_signal(0,0);
-        delay(30);
-    }
-    // keep updating the handshake signal until the west is detected
-    do{
-        inputs = readInputs();
-        WestDetect = extractBits<28, 1>(inputs, 23, 1);
-        // Serial.println(WestDetect[0]);
-        delay(10);
-    } while (WestDetect[0]);
-    Serial.println("update west detect!");
-    delay(200);
-    //once west is detected, wait the message from west board
-    do{
-        Serial.println("waiting for west board message!");
-        while (CAN_CheckRXLevel()) CAN_RX(detect_CAN_ID, detext_RX_Message);
-        Serial.println(CAN_CheckRXLevel());
-        Serial.print((char)detext_RX_Message[0]);
-        Serial.println(detext_RX_Message[1]);
-    } while (detext_RX_Message[0] != 'M');
+  delay(2000);  // Allow time for signal propagation
 
-    for (int i = 0; i < 10; i++){
-        send_handshake_signal(1,1);
-        delay(10);
-    }
-    Serial.println("update east detect!");
-    detext_TX_Message[0] = 'M';
-    detext_TX_Message[1] = detext_RX_Message[1] + 1;
-    //send board position to next board
-    if (detext_RX_Message[1] != 2){
+  // If there is no board on the west → not the main board
+  if (!WestDetect[0]) {
+      Serial.println("West board detected (not main)");
+
+      // Wait for confirmation message from main board
+      do {
+          Serial.println("Awaiting main board confirmation...");
+          delay(100);
+          while (CAN_CheckRXLevel()) {
+              CAN_RX(detect_CAN_ID, detext_RX_Message);
+          }
+      } while (detext_RX_Message[0] != 'C' || detext_RX_Message[1] != 0);
+
+      Serial.println("Main board confirmed.");
+
+      // Reset handshake lines to 0
+      for (int i = 0; i < 10; i++) {
+          send_handshake_signal(0, 0);
+          delay(30);
+      }
+
+      // Wait for handshake signal to be updated again
+      do {
+          inputs = readInputs();
+          WestDetect = extractBits<28, 1>(inputs, 23, 1);
+          delay(10);
+      } while (WestDetect[0]);
+
+      Serial.println("Updated West Detect confirmed.");
+      delay(200);
+
+      // Wait for the message from west board indicating its position
+      do {
+          Serial.println("Waiting for board position info from west...");
+          while (CAN_CheckRXLevel()) {
+              CAN_RX(detect_CAN_ID, detext_RX_Message);
+          }
+      } while (detext_RX_Message[0] != 'M');
+
+      // Send final handshake again
+      for (int i = 0; i < 10; i++) {
+          send_handshake_signal(1, 1);
+          delay(10);
+      }
+
+      Serial.println("East handshake updated.");
+
+      // Send own position (received_position + 1)
+      detext_TX_Message[0] = 'M';
+      detext_TX_Message[1] = detext_RX_Message[1] + 1;
+
+      if (detext_RX_Message[1] != 2) {
+          CAN_TX(detect_CAN_ID, detext_TX_Message);
+          Serial.println("Sent board pos to east.");
+      } else {
+          Serial.println("This is the east-most board.");
+      }
+
+      return detext_TX_Message[1];
+  }
+
+  // If no west detect → this is the main board
+  else {
+      delay(500);
+      Serial.println("Main board detected (no west neighbor)");
+
+      // Notify others that main board is determined
+      detext_TX_Message[0] = 'C';
+      detext_TX_Message[1] = 0;
       CAN_TX(detect_CAN_ID, detext_TX_Message);
-      Serial.println("send board pos to east board");
-      Serial.print((char) detext_TX_Message[0]);
-      Serial.println(detext_TX_Message[1]);
-    }
-    else{
-      Serial.println("I am the most east board!");
-      Serial.println(detext_TX_Message[1]);
-    }
-    return detext_TX_Message[1];
-  }
-  else{
-    delay(500);
-    Serial.println("I am the main board!");
-    // if nothing on the west, then it is the main board with position 0
-    detext_TX_Message[0] = 'C';
-    detext_TX_Message[1] = 0;
-    // tell the other boards that the main board is determined
-    CAN_TX(detect_CAN_ID, detext_TX_Message);
-    Serial.println("send main board message to other boards!");
-    //give the other boards time to receive the message
-    delay(100);
-    send_handshake_signal(1,1);
-    //give the other boards time to update West Detect
-    delay(200);
-    detext_TX_Message[0] = 'M';
-    CAN_TX(detect_CAN_ID, detext_TX_Message);
-    Serial.println("send board info to other boards!");
-    Serial.print((char) detext_TX_Message[0]);
-    Serial.println(detext_TX_Message[1]);
-    return 0;
-  }
-}
+      Serial.println("Sent main board confirmation");
 
-void scanJoystickTask(void * pvParameters) {
-  const TickType_t xFrequency3 = 100/portTICK_PERIOD_MS;
-  int joystickX;
-  int joystickY;
-  int origin = 490;
-  int deadZone = 150;
-  
-  std::string previous_movement = "origin";
-  std::string current_movement;
-  TickType_t xLastWakeTime3 = xTaskGetTickCount();
-  while (1) {
-    vTaskDelayUntil( &xLastWakeTime3, xFrequency3);
-    joystickX = analogRead(JOYX_PIN);
-    joystickY = analogRead(JOYY_PIN);
-    if (abs(joystickX - origin) <= deadZone && abs(joystickY - origin) <= deadZone){
-      current_movement = "origin";
-    }
-    else if (joystickX - origin > deadZone){
-      current_movement = "left";
-    }
-    else if (joystickX - origin < -deadZone){
-      current_movement = "right";
-    }
-    else if (joystickY - origin > deadZone){
-      current_movement = "down";
-    if (selected_option < total_menu_items - 1) {
-                selected_option++;
-
-                // **确保滚动菜单**
-                if ((selected_option * ITEM_SPACING) >= (menu_offset + PAGE_HEIGHT)) {
-                    menu_offset += ITEM_SPACING;
-                }
-            }
-
-    }
-    else if (joystickY - origin < -deadZone){
-      current_movement = "up";
-
-   if (selected_option > 0) {
-                selected_option--;
-
-                // **确保菜单不会超出顶部**
-                if ((selected_option * ITEM_SPACING) < menu_offset) {
-                    menu_offset = std::max(0, menu_offset - ITEM_SPACING);
-                }
-            }
-    }
-
-    if (current_movement != previous_movement && current_movement == "origin"){
-      movement = previous_movement;
-    }
-    else{movement = "origin";}
-    // Serial.println(movement.c_str());
-    previous_movement = current_movement;
-  }
-}
-
-void scanKeysTask(void * pvParameters) {
-  Serial.println("scanKeysTask started!");
-  const TickType_t xFrequency1 = 20/portTICK_PERIOD_MS;
-  TickType_t xLastWakeTime1 = xTaskGetTickCount();
-
-  std::bitset<12> keys;
-  std::bitset<8> current_knobs;
-  std::bitset<4> current_knobs_click;
-
-  std::bitset<12> previou_keys("111111111111");
-  std::bitset<8> previous_knobs("00000000");
-  std::bitset<4> previous_knobs_click("0000");
-
-  std::bitset<1> currentJoystickState{"0"};
-  std::bitset<1> oldJoystickState{"0"};
-
-  std::bitset<1> old_WestDetect;
-  std::bitset<1> old_EastDetect;
-
-  int previousTune = 0;
-  int currentTune = 0;
-  while (1){ 
-    vTaskDelayUntil( &xLastWakeTime1, xFrequency1);
-
-    xSemaphoreTake(sysState.mutex, portMAX_DELAY);
-    xSemaphoreTake(notes.mutex, portMAX_DELAY);
-    xSemaphoreTake(settings.mutex, portMAX_DELAY);
-    sysState.inputs = readInputs();
-    
-    keys = extractBits<inputSize, 12>(sysState.inputs, 0, 12);
-    sysState.WestDetect = extractBits<28, 1>(sysState.inputs, 23, 1);
-    sysState.EastDetect = extractBits<28, 1>(sysState.inputs, 27, 1);
-    current_knobs = extractBits<inputSize, 8>(sysState.inputs, 12, 8);
-    current_knobs_click = extractBits<inputSize, 4>(sysState.inputs, 20, 2).to_ulong() << 2 | extractBits<inputSize, 4>(sysState.inputs, 24, 2).to_ulong();
-    currentJoystickState = extractBits<inputSize, 1>(sysState.inputs, 22, 1).to_ulong();
-
-    if (currentJoystickState != oldJoystickState && currentJoystickState == 0){
-      sysState.joystickState = !sysState.joystickState;
-    }
-
-    updateKnob(sysState.knobValues, previous_knobs, current_knobs, previous_knobs_click, current_knobs_click);
-
-    update_menu_settings(sysState.currentMenu, currentTune);
-
-    if (currentTune != previousTune && sysState.posId == 0 && !sysState.EastDetect[0]){
-      Serial.println("tune value changed!");
-      __atomic_store_n(&settings.tune , currentTune, __ATOMIC_RELAXED);
-      // settings.tune = currentTune;
-      TX_Message[0] = 'T';
-      TX_Message[1] = currentTune;
-      xQueueSend( msgOutQ, const_cast<uint8_t*>(TX_Message), portMAX_DELAY);
-    }
-
-
-    // Serial.println(settings.waveIndex);
-    //if there is nothing on the west and east before, but now there is something on the west or east
-    //then update the posId
-    if (old_EastDetect[0] && old_WestDetect[0] && (!sysState.WestDetect[0])){
-      Serial.println("request posId");
       delay(100);
-      TX_Message[0] = 'N';
-      TX_Message[1] = sysState.local_boardId;
-      xQueueSend( msgOutQ, const_cast<uint8_t*>(TX_Message), portMAX_DELAY);
-    }
+      send_handshake_signal(1, 1);
+      delay(200);
 
-    // if nothing on west and east then local play mode
-    if (sysState.EastDetect[0] && sysState.WestDetect[0]){
-      sysState.posId = 0;
-      // int tune = settings.tune;
-      int tune=__atomic_load_n(&settings.tune,__ATOMIC_RELAXED);
-      for (int i = 0; i < 12; i++){
-        if (keys.to_ulong() != 0xFFF){
-          if (!keys[i]) {
-            notes.notes[(tune-1)*12+i].active = true;
-          }
-          else{
-            notes.notes[(tune-1)*12+i].active =false;
-          }
-        }
-        else{
-          notes.notes[(tune-1)*12+i].active =false;
-        }
-      }
-    }
+      // Send position (M0)
+      detext_TX_Message[0] = 'M';
+      CAN_TX(detect_CAN_ID, detext_TX_Message);
+      Serial.println("Broadcasted main board position");
 
-    // transmit mode, do not play note locally
-    else{
-      for (int i = 0; i < 12; i++){
-        if (keys[i] != previou_keys[i]){
-          TX_Message[0] = keys[i] ? 'R' : 'P';
-          TX_Message[1] = i;
-          TX_Message[2] = settings.tune;
-          TX_Message[3] = sysState.posId;
-          xQueueSend( msgOutQ, const_cast<uint8_t*>(TX_Message), portMAX_DELAY);
-        }
-      }
-    }
-
-    previousTune = currentTune;
-    previou_keys = keys;
-    previous_knobs = current_knobs;
-    previous_knobs_click = current_knobs_click;
-    oldJoystickState = currentJoystickState;
-    old_WestDetect = sysState.WestDetect;
-    old_EastDetect = sysState.EastDetect;
-    xSemaphoreGive(sysState.mutex);
-    xSemaphoreGive(notes.mutex);
-    xSemaphoreGive(settings.mutex);
+      return 0;
   }
 }
+
+void scanKeysTask(void *pvParameters) {
+  Serial.println("scanKeysTask started!");
+
+  const TickType_t scanInterval = 20 / portTICK_PERIOD_MS;
+  TickType_t lastWakeTime = xTaskGetTickCount();
+
+  std::bitset<12> currentKeys;
+  std::bitset<12> previousKeys("111111111111");
+
+  std::bitset<8> knobStatesCurrent, knobStatesPrevious("00000000");
+  std::bitset<4> knobClicksCurrent, knobClicksPrevious("0000");
+
+  std::bitset<1> joystickStateCurrent("0"), joystickStatePrevious("0");
+  std::bitset<1> westDetectPrevious, eastDetectPrevious;
+
+  int tunePrevious = 0;
+  int tuneCurrent = 0;
+
+  while (1) {
+      vTaskDelayUntil(&lastWakeTime, scanInterval);
+
+      // Lock shared state
+      xSemaphoreTake(sysState.mutex, portMAX_DELAY);
+      xSemaphoreTake(notes.mutex, portMAX_DELAY);
+      xSemaphoreTake(settings.mutex, portMAX_DELAY);
+
+      // Read all hardware inputs
+      sysState.inputs = readInputs();
+
+      currentKeys = extractBits<inputSize, 12>(sysState.inputs, 0, 12);
+      sysState.WestDetect = extractBits<28, 1>(sysState.inputs, 23, 1);
+      sysState.EastDetect = extractBits<28, 1>(sysState.inputs, 27, 1);
+
+      knobStatesCurrent = extractBits<inputSize, 8>(sysState.inputs, 12, 8);
+      knobClicksCurrent = extractBits<inputSize, 4>(sysState.inputs, 20, 2).to_ulong() << 2 |
+                          extractBits<inputSize, 4>(sysState.inputs, 24, 2).to_ulong();
+
+      joystickStateCurrent = extractBits<inputSize, 1>(sysState.inputs, 22, 1).to_ulong();
+
+      // Toggle joystick flag if state changed and pressed
+      if (joystickStateCurrent != joystickStatePrevious && joystickStateCurrent == 0) {
+          sysState.joystickState = !sysState.joystickState;
+      }
+
+      // Update knob values and click states
+      updateKnob(sysState.knobValues, knobStatesPrevious, knobStatesCurrent,
+                 knobClicksPrevious, knobClicksCurrent);
+
+      // Update menu configuration
+      update_menu_settings(sysState.currentMenu, tuneCurrent);
+
+      // Sync tune if changed and in main board
+      if (tuneCurrent != tunePrevious && sysState.posId == 0 && !sysState.EastDetect[0]) {
+          Serial.println("Tune updated by main board.");
+          __atomic_store_n(&settings.tune, tuneCurrent, __ATOMIC_RELAXED);
+          TX_Message[0] = 'T';
+          TX_Message[1] = tuneCurrent;
+          xQueueSend(msgOutQ, const_cast<uint8_t *>(TX_Message), portMAX_DELAY);
+      }
+
+      // Position update trigger if WestDetect changed
+      if (eastDetectPrevious[0] && westDetectPrevious[0] && (!sysState.WestDetect[0])) {
+          Serial.println("Triggering position update request...");
+          delay(100);
+          TX_Message[0] = 'N';
+          TX_Message[1] = sysState.local_boardId;
+          xQueueSend(msgOutQ, const_cast<uint8_t *>(TX_Message), portMAX_DELAY);
+      }
+
+      // Main board operation: local sound play
+      if (sysState.WestDetect[0] && sysState.EastDetect[0]) {
+          sysState.posId = 0;
+          int tune = __atomic_load_n(&settings.tune, __ATOMIC_RELAXED);
+          for (int i = 0; i < 12; ++i) {
+              if (currentKeys.to_ulong() != 0xFFF) {
+                  notes.notes[(tune - 1) * 12 + i].active = !currentKeys[i];
+              } else {
+                  notes.notes[(tune - 1) * 12 + i].active = false;
+              }
+          }
+      }
+
+      // Otherwise, in relay mode: forward note state changes via CAN
+      else {
+          for (int i = 0; i < 12; ++i) {
+              if (currentKeys[i] != previousKeys[i]) {
+                  TX_Message[0] = currentKeys[i] ? 'R' : 'P';
+                  TX_Message[1] = i;
+                  TX_Message[2] = settings.tune;
+                  TX_Message[3] = sysState.posId;
+                  xQueueSend(msgOutQ, const_cast<uint8_t *>(TX_Message), portMAX_DELAY);
+              }
+          }
+      }
+
+      // Store previous values for next loop
+      tunePrevious = tuneCurrent;
+      previousKeys = currentKeys;
+      knobStatesPrevious = knobStatesCurrent;
+      knobClicksPrevious = knobClicksCurrent;
+      joystickStatePrevious = joystickStateCurrent;
+      westDetectPrevious = sysState.WestDetect;
+      eastDetectPrevious = sysState.EastDetect;
+
+      // Release all mutexes
+      xSemaphoreGive(sysState.mutex);
+      xSemaphoreGive(notes.mutex);
+      xSemaphoreGive(settings.mutex);
+  }
+}
+
+// -------------------- Joystick Scanning Task --------------------
+void scanJoystickTask(void *pvParameters) {
+  const TickType_t xFrequency = 100 / portTICK_PERIOD_MS;
+  TickType_t xLastWakeTime = xTaskGetTickCount();
+
+  const int origin = 490;              // Joystick center position
+  const int deadZone = 150;            // Threshold range around center to ignore small drift
+  int joystickX = 0, joystickY = 0;
+
+  std::string previousMovement = "origin";
+  std::string currentMovement;
+
+  while (1) {
+      vTaskDelayUntil(&xLastWakeTime, xFrequency);
+
+      joystickX = analogRead(JOYX_PIN);
+      joystickY = analogRead(JOYY_PIN);
+
+      // Determine joystick movement direction
+      if (abs(joystickX - origin) <= deadZone && abs(joystickY - origin) <= deadZone) {
+          currentMovement = "origin";
+      } else if (joystickX - origin > deadZone) {
+          currentMovement = "left";
+      } else if (joystickX - origin < -deadZone) {
+          currentMovement = "right";
+      } else if (joystickY - origin > deadZone) {
+          currentMovement = "down";
+
+          // Scroll menu down
+          if (selected_option < total_menu_items - 1) {
+              selected_option++;
+              if ((selected_option * ITEM_SPACING) >= (menu_offset + PAGE_HEIGHT)) {
+                  menu_offset += ITEM_SPACING;
+              }
+          }
+
+      } else if (joystickY - origin < -deadZone) {
+          currentMovement = "up";
+
+          // Scroll menu up
+          if (selected_option > 0) {
+              selected_option--;
+              if ((selected_option * ITEM_SPACING) < menu_offset) {
+                  menu_offset = std::max(0, menu_offset - ITEM_SPACING);
+              }
+          }
+      }
+
+      // Confirm movement only on release to center
+      if (currentMovement != previousMovement && currentMovement == "origin") {
+          movement = previousMovement;
+      } else {
+          movement = "origin";
+      }
+
+      previousMovement = currentMovement;
+  }
+}
+
+
 
 void displayUpdateTask(void * pvParameters) {
   const TickType_t xFrequency2 = 100/portTICK_PERIOD_MS;
@@ -632,286 +545,394 @@ void displayUpdateTask(void * pvParameters) {
   }
 }
 
+// -------------------- Module: Background Audio Calculation Task --------------------
+// Background task for audio sample synthesis and processing
+void backgroundCalcTask(void *pvParameters) {
+  static float prevfloatAmp = 0;
+
+  while (1) {
+      // Wait for buffer availability
+      xSemaphoreTake(sampleBufferSemaphore, portMAX_DELAY);
+      uint32_t writeCtr = 0;
+
+      while (writeCtr < SAMPLE_BUFFER_SIZE / 2) {
+          int vol_knob_value = settings.volume;
+          int version_knob_value = 8 - settings.waveIndex;
+
+          bool hasActiveKey = false;
+          int activeKeyCount = 0;
+          float floatAmp = 0.0f;
+
+          for (int i = 0; i < 96; ++i) {
+              if (writeCtr >= SAMPLE_BUFFER_SIZE / 2) break;
+
+              bool isActive = __atomic_load_n(&notes.notes[i].active, __ATOMIC_RELAXED);
+              if (isActive) {
+                  hasActiveKey = true;
+                  activeKeyCount++;
+
+                  float amp = 0.0f;
+
+                  // Waveform generation based on knob selection
+                  switch (version_knob_value) {
+                      case 8:  // Sawtooth
+                          amp = calcSawtoothAmp(&notes.notes[i].floatPhaseAcc, vol_knob_value, i);
+                          break;
+                      case 7:  // Sine
+                          amp = getSample(notePhases[i], &notes.notes[i].floatPhaseAcc, sineTable);
+                          break;
+                      case 6:  // Square
+                          amp = getSample(notePhases[i], &notes.notes[i].floatPhaseAcc, squareTable);
+                          break;
+                      case 5:  // Triangle
+                          amp = getSample(notePhases[i], &notes.notes[i].floatPhaseAcc, triangleTable);
+                          break;
+                      case 4:  // Piano
+                          amp = getSample(notePhases[i], &notes.notes[i].floatPhaseAcc, pianoTable);
+                          break;
+                      case 3:  // Saxophone
+                          amp = getSample(notePhases[i], &notes.notes[i].floatPhaseAcc, saxophoneTable);
+                          break;
+                      case 2:  // Bell
+                          amp = getSample(notePhases[i], &notes.notes[i].floatPhaseAcc, bellTable);
+                          break;
+                      case 1:  // Alarm
+                          amp = getSample(notePhases[i], &notes.notes[i].floatPhaseAcc, squareTable);
+                          floatAmp += calcHornVout(amp, vol_knob_value, i);
+                          break;
+                      default: // Random (dongTable)
+                          amp = getSample(notePhases[i], &notes.notes[i].floatPhaseAcc, dongTable);
+                          break;
+                  }
+
+                  // Effect Chain
+                  floatAmp += addEffects(amp, vol_knob_value, i);
+                  floatAmp = applyEffects(floatAmp);
+              }
+
+              // When reaching last note, finalize this sample
+              if (i == 95 && activeKeyCount > 0) {
+                  floatAmp /= activeKeyCount;
+                  floatAmp += addLFO(floatAmp, vol_knob_value);
+                  floatAmp = addLPF(floatAmp, &prevfloatAmp);
+                  uint32_t Vout = static_cast<uint32_t>(floatAmp);
+                  writeToSampleBuffer(Vout, writeCtr++);
+              }
+          }
+
+          // No keys active → write silence
+          if (!hasActiveKey && writeCtr < SAMPLE_BUFFER_SIZE / 2) {
+              writeToSampleBuffer(0, writeCtr++);
+          }
+      }
+
+      vTaskDelay(1); // Yield to other tasks
+  }
+}
+// -------------------- Task: Decode Received CAN Messages --------------------
 void decodeTask(void * pvParameters) {
   Serial.println("decodeTask started!");
   while (1) {
-    xQueueReceive(msgInQ, RX_Message, portMAX_DELAY);
-    xSemaphoreTake(sysState.mutex, portMAX_DELAY);
-    xSemaphoreTake(notes.mutex, portMAX_DELAY);
-    xSemaphoreTake(settings.mutex, portMAX_DELAY);
-    // for (int i=0; i<48; i++){
-    if (sysState.posId == 0){
-      if (RX_Message[0] == 'P'){
-        sysState.inputs[RX_Message[1]] = 0;
-        notes.notes[(RX_Message[2]-1)*12+RX_Message[1]].active = true;
-      }
-      else if (RX_Message[0] == 'R'){
-        sysState.inputs[RX_Message[1]] = 1;
-        notes.notes[(RX_Message[2]-1)*12+RX_Message[1]].active = false;
-      }
-    }
-    // // if board 1 receives a message from board 0, it will send the message back to the board 0
-    else if(RX_Message[3] == 0 && sysState.posId == 1
-          && (RX_Message[0] == 'R' || RX_Message[0] == 'P')){
-        RX_Message[3] = 1;
-        xQueueSend( msgOutQ, const_cast<uint8_t*>(RX_Message), portMAX_DELAY);
-    }
-    
-    if (RX_Message[0] == 'T'){
-      Serial.println("update tune!");
-      settings.tune = RX_Message[1] + sysState.posId;
-      settings.tune = constrain(settings.tune, 0, 8);
-      Serial.println(settings.tune);
-    }
+      // Wait for incoming message
+      xQueueReceive(msgInQ, RX_Message, portMAX_DELAY);
 
-    if (RX_Message[0] == 'N'){
-      Serial.println("new board request receriaved!");
-      TX_Message[0] = 'U';
-      TX_Message[1] = sysState.posId;
-      TX_Message[2] = RX_Message[1];
-      xQueueSend( msgOutQ, const_cast<uint8_t*>(TX_Message), portMAX_DELAY);
-    }
+      xSemaphoreTake(sysState.mutex, portMAX_DELAY);
+      xSemaphoreTake(notes.mutex, portMAX_DELAY);
+      xSemaphoreTake(settings.mutex, portMAX_DELAY);
 
-    if (RX_Message[0] == 'U' && RX_Message[2] == sysState.local_boardId){
-      if (RX_Message[1] >= sysState.posId){
-        sysState.posId = RX_Message[1] + 1;
-        settings.tune = sysState.posId + 3;
-        Serial.print("update posId: ");
-        Serial.println(sysState.posId);
+      // ---------- Handle Note Press/Release for Main Board ----------
+      if (sysState.posId == 0) {
+          if (RX_Message[0] == 'P') {
+              sysState.inputs[RX_Message[1]] = 0;
+              notes.notes[(RX_Message[2] - 1) * 12 + RX_Message[1]].active = true;
+          } else if (RX_Message[0] == 'R') {
+              sysState.inputs[RX_Message[1]] = 1;
+              notes.notes[(RX_Message[2] - 1) * 12 + RX_Message[1]].active = false;
+          }
       }
-    }
 
-    xSemaphoreGive(notes.mutex);
-    xSemaphoreGive(sysState.mutex);
-    xSemaphoreGive(settings.mutex);
+      // ---------- Forward Message from Board 0 to Board 1 ----------
+      else if (RX_Message[3] == 0 && sysState.posId == 1 &&
+               (RX_Message[0] == 'P' || RX_Message[0] == 'R')) {
+          RX_Message[3] = 1;
+          xQueueSend(msgOutQ, const_cast<uint8_t*>(RX_Message), portMAX_DELAY);
+      }
+
+      // ---------- Update Tune ----------
+      if (RX_Message[0] == 'T') {
+          Serial.println("Update tune!");
+          settings.tune = RX_Message[1] + sysState.posId;
+          settings.tune = constrain(settings.tune, 0, 8);
+          Serial.println(settings.tune);
+      }
+
+      // ---------- New Board Join Request ----------
+      if (RX_Message[0] == 'N') {
+          Serial.println("New board request received!");
+          TX_Message[0] = 'U';
+          TX_Message[1] = sysState.posId;
+          TX_Message[2] = RX_Message[1];
+          xQueueSend(msgOutQ, const_cast<uint8_t*>(TX_Message), portMAX_DELAY);
+      }
+
+      // ---------- Update Board ID Position ----------
+      if (RX_Message[0] == 'U' && RX_Message[2] == sysState.local_boardId) {
+          if (RX_Message[1] >= sysState.posId) {
+              sysState.posId = RX_Message[1] + 1;
+              settings.tune = sysState.posId + 3;
+              Serial.print("Update posId: ");
+              Serial.println(sysState.posId);
+          }
+      }
+
+      xSemaphoreGive(notes.mutex);
+      xSemaphoreGive(sysState.mutex);
+      xSemaphoreGive(settings.mutex);
   }
 }
 
-void CAN_TX_Task (void * pvParameters) {
+// -------------------- Task: CAN Message Transmit Handler --------------------
+void CAN_TX_Task(void * pvParameters) {
   Serial.println("CAN_TX_Task started!");
-	uint8_t msgOut[8];
-	while (1) {
-		xQueueReceive(msgOutQ, msgOut, portMAX_DELAY);
-		xSemaphoreTake(CAN_TX_Semaphore, portMAX_DELAY);
-    Serial.print("TX: ");
-    Serial.print((char) msgOut[0]);
-    Serial.print(msgOut[1]);
-    Serial.print(msgOut[2]);
-    Serial.println();
-		CAN_TX(ID, msgOut);
-    
-	}
-}
+  uint8_t msgOut[8];
 
-void fillmsgQ(){
-  uint8_t RX_Message[8] = {'P', 4, 0, 0, 0, 0, 0, 0}; 
-  for (int a = 0; a < 60; a++){
-    xQueueSend(msgOutQ, RX_Message, portMAX_DELAY);
-  }
-}
-
-void time_CAN_TX_Task () {
-  // Serial.println("CAN_TX_Task started!");
-	uint8_t msgOut[8];
-  // Generic message
-
-  for (int i=0;i<60;i++){
+  while (1) {
+      // Wait for a message in TX queue
       xQueueReceive(msgOutQ, msgOut, portMAX_DELAY);
-      // CAN_TX(ID, msgOut);
+      xSemaphoreTake(CAN_TX_Semaphore, portMAX_DELAY);
+
+      // Print debug info
+      Serial.print("TX: ");
+      Serial.print((char)msgOut[0]);
+      Serial.print(msgOut[1]);
+      Serial.print(msgOut[2]);
+      Serial.println();
+
+      // Transmit CAN message
+      CAN_TX(ID, msgOut);
   }
-  
-		
-    
-	// }
 }
 
-
-void backCalcTime(){
-    setWorstcaseBackCalc();
-    uint32_t startTime = micros();
-	for (int iter = 0; iter < 32; iter++) {
-		 backgroundCalcTask(NULL);
-     
-	}
-  Serial.println(micros()-startTime);
-}
-void displayTime(){
-    setWorstcaseDisplay();
-    uint32_t startTime = micros();
-	for (int iter = 0; iter < 32; iter++) {
-		 displayUpdateTask(NULL);
-     Serial.println(micros()-startTime);
-	}
+// -------------------- Utility: Fill Message Queue for Test --------------------
+void fillmsgQ() {
+  uint8_t RX_Message[8] = {'P', 4, 0, 0, 0, 0, 0, 0};
+  for (int i = 0; i < 60; i++) {
+      xQueueSend(msgOutQ, RX_Message, portMAX_DELAY);
+  }
 }
 
-void joystickTime(){
-  //joystick has no worst case because it is a simple scan of joystick values
-      uint32_t startTime = micros();
-	for (int iter = 0; iter < 32; iter++) {
-		 scanJoystickTask(NULL);
-     Serial.println(micros()-startTime);
-	}
-
+// -------------------- Task: Dummy CAN TX Timing Test --------------------
+void time_CAN_TX_Task() {
+  uint8_t msgOut[8];
+  for (int i = 0; i < 60; i++) {
+      xQueueReceive(msgOutQ, msgOut, portMAX_DELAY);
+      // CAN_TX(ID, msgOut);  // Optional for testing
+  }
 }
-void canTXtime(){
+
+// -------------------- Function: Measure Worst Case Background Calc Time --------------------
+void backCalcTime() {
+  setWorstcaseBackCalc();
+  uint32_t startTime = micros();
+  for (int i = 0; i < 32; i++) {
+      backgroundCalcTask(NULL);
+  }
+  Serial.println(micros() - startTime);
+}
+
+// -------------------- Function: Measure Worst Case Display Update Time --------------------
+void displayTime() {
+  setWorstcaseDisplay();
+  uint32_t startTime = micros();
+  for (int i = 0; i < 32; i++) {
+      displayUpdateTask(NULL);
+      Serial.println(micros() - startTime);
+  }
+}
+
+// -------------------- Function: Measure Joystick Task Time --------------------
+void joystickTime() {
+  uint32_t startTime = micros();
+  for (int i = 0; i < 32; i++) {
+      scanJoystickTask(NULL);
+      Serial.println(micros() - startTime);
+  }
+}
+
+// -------------------- Function: Measure CAN TX Task Time --------------------
+void canTXtime() {
   fillmsgQ();
   uint32_t startTime = micros();
-
-	for (int iter = 0; iter < 32; iter++) {
-		 time_CAN_TX_Task();
-     fillmsgQ();
-	}
-  Serial.println(micros()-startTime);
-  
+  for (int i = 0; i < 32; i++) {
+      time_CAN_TX_Task();
+      fillmsgQ();
+  }
+  Serial.println(micros() - startTime);
 }
-void scankeyTime(){
+
+// -------------------- Function: Measure Key Scan Task Time --------------------
+void scankeyTime() {
   setWorstCaseScankey();
-      uint32_t startTime = micros();
-	for (int iter = 0; iter < 32; iter++) {
-		 scanKeysTask(NULL);
-    //  Serial.println(micros()-startTime);
-	}
-  Serial.println(micros()-startTime);
+  uint32_t startTime = micros();
+  for (int i = 0; i < 32; i++) {
+      scanKeysTask(NULL);
+  }
+  Serial.println(micros() - startTime);
 }
-void decodeTime(){
-  // setWorstCaseScankey();
-      uint32_t startTime = micros();
-	for (int iter = 0; iter < 32; iter++) {
-		 decodeTask(NULL);
-    //  Serial.println(micros()-startTime);
-	}
-  Serial.println(micros()-startTime);
-}
-void testSetup(){
 
+// -------------------- Function: Measure Decode Task Time --------------------
+void decodeTime() {
+  uint32_t startTime = micros();
+  for (int i = 0; i < 32; i++) {
+      decodeTask(NULL);
+  }
+  Serial.println(micros() - startTime);
+}
+
+// -------------------- Function: Test Setup Entry Point --------------------
+void testSetup() {
   sysState.knobValues[2].current_knob_value = 4;
   sysState.knobValues[3].current_knob_value = 6;
+
   Serial.begin(9600);
   Serial.println("Serial port initialised");
+
   generatePhaseLUT();
   set_pin_directions();
   set_notes();
   init_settings();
+
   CAN_Init(true);
-  setCANFilter(0x123,0x7ff);
+  setCANFilter(0x123, 0x7ff);
   CAN_RegisterRX_ISR(CAN_RX_ISR);
   CAN_RegisterTX_ISR(CAN_TX_ISR);
   CAN_Start();
-  //initial_display();
+
+  // Uncomment to test individually
   // joystickTime();
   // displayTime();
   // scankeyTime();
   // backCalcTime();
   canTXtime();
   // decodeTime();
-  while(1){
 
-  }
+  while (1) {}  // Keep running
 }
 
 void setup() {
-  // testSetup();
+  // ---------- Initialize Internal Knob Default State ----------
   sysState.knobValues[2].current_knob_value = 4;
   sysState.knobValues[3].current_knob_value = 6;
-  //Set pin directions
+
+  // ---------- Initialize Phase Lookup Table and Settings ----------
   generatePhaseLUT();
   set_pin_directions();
   set_notes();
   init_settings();
-  
-  initial_display();
   initEffects();
 
-  TIM_TypeDef *Instance = TIM1;
-  HardwareTimer *sampleTimer = new HardwareTimer(Instance);
+  // ---------- Initial Display Rendering ----------
+  initial_display();
 
-  //Initialise sample timer
-  sampleTimer->setOverflow(22000, HERTZ_FORMAT);
-  sampleTimer->attachInterrupt(sampleISR);
-  sampleTimer->resume();
+  // ---------- Setup Sample Timer (TIM1) ----------
+  TIM_TypeDef* timerInstance = TIM1;
+  HardwareTimer* audioSampleTimer = new HardwareTimer(timerInstance);
+  audioSampleTimer->setOverflow(22000, HERTZ_FORMAT);
+  audioSampleTimer->attachInterrupt(sampleISR);
+  audioSampleTimer->resume();
 
-  //Initialise CAN TX semaphore
-  CAN_TX_Semaphore = xSemaphoreCreateCounting(3,3);
+  // ---------- Setup Semaphores ----------
+  CAN_TX_Semaphore = xSemaphoreCreateCounting(3, 3);
   sampleBufferSemaphore = xSemaphoreCreateBinary();
-  xSemaphoreGive(sampleBufferSemaphore);
+  xSemaphoreGive(sampleBufferSemaphore); // Prime the buffer initially
 
-  //Initialise CAN Bus
+  // ---------- Initialize CAN Communication ----------
   CAN_Init(false);
-  setCANFilter(0x123,0x7ff);
+  setCANFilter(0x123, 0x7FF);
   CAN_RegisterRX_ISR(CAN_RX_ISR);
   CAN_RegisterTX_ISR(CAN_TX_ISR);
   CAN_Start();
 
-  //Initialise serial port
+  // ---------- Serial Communication Setup ----------
   Serial.begin(9600);
-  Serial.println("Serial port initialised");
-  
+  Serial.println("Serial port initialized");
+
+  // ---------- Auto-Detect Board Position ID ----------
   sysState.posId = auto_detect_init();
   delay(200);
   initial_display();
+
   Serial.print("posId: ");
   Serial.println(sysState.posId);
   sysState.knobValues[2].current_knob_value = sysState.posId + 3;
+
   Serial.print("UID: ");
   Serial.println(sysState.local_boardId);
 
-  //Create tasks
+  // ---------- Create System Tasks ----------
   xTaskCreate(
-  backgroundCalcTask,		/* Function that implements the task */
-  "BackCalc",		/* Text name for the task */
-  256 ,      		/* Stack size in words, not bytes */
-  NULL,			/* Parameter passed into the task */
-  4,			/* Task priority */
-  &BackCalc_Handle );	/* Pointer to store the task handle */
+      backgroundCalcTask,
+      "BackCalc",
+      256,
+      NULL,
+      4,
+      &BackCalc_Handle
+  );
 
   xTaskCreate(
-  scanKeysTask,		/* Function that implements the task */
-  "scanKeys",		/* Text name for the task */
-  256,      		/* Stack size in words, not bytes */
-  NULL,			/* Parameter passed into the task */
-  6,			/* Task priority */
-  &scanKeysHandle );	/* Pointer to store the task handle */
+      scanKeysTask,
+      "scanKeys",
+      256,
+      NULL,
+      6,
+      &scanKeysHandle
+  );
 
   xTaskCreate(
-  displayUpdateTask,		/* Function that implements the task */
-  "displayUpdate",		/* Text name for the task */
-  256 ,      		/* Stack size in words, not bytes */
-  NULL,			/* Parameter passed into the task */
-  2,			/* Task priority */
-  &displayUpdateHandle );	/* Pointer to store the task handle */
+      displayUpdateTask,
+      "displayUpdate",
+      256,
+      NULL,
+      2,
+      &displayUpdateHandle
+  );
 
   xTaskCreate(
-  decodeTask,		/* Function that implements the task */
-  "decode",		/* Text name for the task */
-  256 ,      		/* Stack size in words, not bytes */
-  NULL,			/* Parameter passed into the task */
-  5,			/* Task priority */
-  &decodeTaskHandle );	/* Pointer to store the task handle */
+      decodeTask,
+      "decode",
+      256,
+      NULL,
+      5,
+      &decodeTaskHandle
+  );
 
   xTaskCreate(
-  scanJoystickTask,		/* Function that implements the task */
-  "scanJoystick",		/* Text name for the task */
-  256 ,      		/* Stack size in words, not bytes */
-  NULL,			/* Parameter passed into the task */
-  1,			/* Task priority */
-  &scanJoystick_Handle );	/* Pointer to store the task handle */
+      scanJoystickTask,
+      "scanJoystick",
+      256,
+      NULL,
+      1,
+      &scanJoystick_Handle
+  );
 
   xTaskCreate(
-  CAN_TX_Task,		/* Function that implements the task */
-  "CAN_TX",		/* Text name for the task */
-  256 ,      		/* Stack size in words, not bytes */
-  NULL,			/* Parameter passed into the task */
-  3,			/* Task priority */
-  &CAN_TX_Handle );	/* Pointer to store the task handle */
+      CAN_TX_Task,
+      "CAN_TX",
+      256,
+      NULL,
+      3,
+      &CAN_TX_Handle
+  );
 
-  notes.mutex = xSemaphoreCreateMutex();
-  sysState.mutex = xSemaphoreCreateMutex(); //Create mutex
-  settings.mutex= xSemaphoreCreateMutex();
+  // ---------- Initialize Shared Resource Mutex ----------
+  notes.mutex     = xSemaphoreCreateMutex();
+  sysState.mutex  = xSemaphoreCreateMutex();
+  settings.mutex  = xSemaphoreCreateMutex();
+
+  // ---------- Start RTOS Scheduler ----------
   vTaskStartScheduler();
-
-
-
 }
+
 
 void loop() {
 }

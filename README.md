@@ -1,6 +1,6 @@
 # LUGUAN Synthesizer
 
-This document consolidates all aspects of the LUGUAN Synthesizer project into a single README. It covers task identification, timing analysis and CPU utilisation, shared data structures with inter-task dependencies, as well as user instructions.
+This report consolidates all aspects of the LUGUAN Synthesizer project into a single README. It covers task identification, timing analysis and CPU utilisation, shared data structures with inter-task dependencies, as well as user instructions.
 
 ---
 ## Check out the demo video
@@ -13,8 +13,7 @@ This document consolidates all aspects of the LUGUAN Synthesizer project into a 
 1. [Task Identification and Implementation](#task-identification-and-implementation)
 2. [Timing Analysis and CPU Utilisation](#timing-analysis-and-cpu-utilisation)
 3. [Shared Data Structures, Synchronisation, and Inter-Task Dependencies](#shared-data-structures-synchronisation-and-inter-task-dependencies)
-4. [User Manual](#user-manual)
-5. [Additional Notes](#additional-notes)
+4. [User Instruction](#user-instruction)
 
 ---
 
@@ -192,7 +191,7 @@ Below is a dependency diagram that illustrates the overall structure.
 
 ---
 
-## LUGUAN Keyboard User Manual
+## LUGUAN Keyboard User Instructions
 
 ![image](https://github.com/SaxonShang/LUGUAN2/blob/main/doc/MENU.jpg)
 
@@ -209,7 +208,7 @@ Below is a dependency diagram that illustrates the overall structure.
 - Move to the second page if the menu list exceeds the page height.
 - Adjust the state parameter (**On/Off**) using **Knob 2**.
 
-![image](https://github.com/SaxonShang/LUGUAN2/blob/main/doc/MENB2.jpg)
+![image](https://github.com/SaxonShang/LUGUAN2/blob/main/doc/MEBU2.jpg)
 ![image](https://github.com/SaxonShang/LUGUAN2/blob/main/doc/PAGE2.jpg)
 ### Metronome (Met)
 - Provides steady beats for accurate rhythm.

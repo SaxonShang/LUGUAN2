@@ -1,178 +1,172 @@
+#ifndef PIN_DEFINITIONS_H
+#define PIN_DEFINITIONS_H
+
 #include <Arduino.h>
 #include <U8g2lib.h>
 #include <bitset>
 #include <string>
 
-#ifndef PIN_DEFINITIONS_H
-#define PIN_DEFINITIONS_H
+// ============================ Sampling Settings ============================
 #define SAMPLE_RATE 22000
+const uint32_t sampleRate = SAMPLE_RATE;
 
-//constants
-const uint32_t sampleRate = 22000;  //Sample rate
+// ============================ CAN Settings ============================
+uint32_t ID = 0x123;
+uint8_t RX_Message[8] = {0};
+volatile uint8_t TX_Message[8] = {0};
 
-uint32_t ID = 0x123; //CAN ID
-uint8_t RX_Message[8] = {0};  //CAN RX message
-volatile uint8_t TX_Message[8] = {0}; //CAN TX message
+// CAN Communication Queues
+QueueHandle_t msgInQ = xQueueCreate(60, 8);   // RX queue
+QueueHandle_t msgOutQ = xQueueCreate(60, 8);  // TX queue
+SemaphoreHandle_t CAN_TX_Semaphore;
 
-//Create message input and output queues
-//36 messages of 8 bytes, each message takes around 0.7ms to process
-QueueHandle_t msgInQ = xQueueCreate(60,8);; // Message input queue
-QueueHandle_t msgOutQ = xQueueCreate(60,8);; // Message output queue
+// ============================ Sample Buffer ============================
+const int SAMPLE_BUFFER_SIZE = 2200;
+uint8_t sampleBuffer0[SAMPLE_BUFFER_SIZE / 2];
+uint8_t sampleBuffer1[SAMPLE_BUFFER_SIZE / 2];
+volatile bool writeBuffer1 = false;
+SemaphoreHandle_t sampleBufferSemaphore;
 
-SemaphoreHandle_t CAN_TX_Semaphore; //CAN TX semaphore
+// ============================ Task Handles ============================
+TaskHandle_t scanKeysHandle         = NULL;
+TaskHandle_t displayUpdateHandle   = NULL;
+TaskHandle_t decodeTaskHandle      = NULL;
+TaskHandle_t CAN_TX_Handle         = NULL;
+TaskHandle_t BackCalc_Handle       = NULL;
+TaskHandle_t scanJoystick_Handle   = NULL;
 
-//Create task handles
-TaskHandle_t scanKeysHandle = NULL;
-TaskHandle_t displayUpdateHandle = NULL;
-TaskHandle_t decodeTaskHandle = NULL;
-TaskHandle_t CAN_TX_Handle = NULL;
-TaskHandle_t BackCalc_Handle = NULL;
-TaskHandle_t scanJoystick_Handle = NULL;
-
-//Display driver object
+// ============================ Display Driver ============================
 U8G2_SSD1305_128X32_NONAME_F_HW_I2C u8g2(U8G2_R0);
 
-
-const int SAMPLE_BUFFER_SIZE =2200;
-uint8_t sampleBuffer0[SAMPLE_BUFFER_SIZE/2];
-uint8_t sampleBuffer1[SAMPLE_BUFFER_SIZE/2];
-SemaphoreHandle_t sampleBufferSemaphore;
-volatile bool writeBuffer1 = false;
-
-const std::size_t inputSize = 28;
+// ============================ Input Matrix ============================
+const size_t inputSize = 28;
 std::string movement;
 
+// ============================ Display Menu Info ============================
 std::string bottomBar_menu[4] = {"Menu", "Wave", "Tone", "Vol"};
 std::string waveNames[9] = {"Saw", "Sin", "Squ", "Tri", "Pia", "Saxo", "Bell", "Alar", "None"};
 std::string menu_first_level[7] = {"Met", "Fade", "LFO", "ADSR", "LPF", "effect", "exit"};
 
-struct knob{
-  int current_knob_value = 8;
-  int lastIncrement = 0;
-  bool clickState = 0;
+// ============================ System Structs ============================
+
+struct knob {
+    int current_knob_value = 8;
+    int lastIncrement = 0;
+    bool clickState = false;
 };
 
-//Struct to hold system state
 struct {
-  std::bitset<inputSize> inputs;
-  SemaphoreHandle_t mutex;  
-  std::array<knob, 4> knobValues;
-  uint8_t local_boardId = HAL_GetUIDw0();
-  std::bitset<1> WestDetect;
-  std::bitset<1> EastDetect;
-  std::string currentMenu = "Main";
-  int joystickState = 0;
-  bool singleMode = true;
-  int posId = 0;
+    std::bitset<inputSize> inputs;
+    SemaphoreHandle_t mutex;
+    std::array<knob, 4> knobValues;
+    uint8_t local_boardId = HAL_GetUIDw0();
+    std::bitset<1> WestDetect;
+    std::bitset<1> EastDetect;
+    std::string currentMenu = "Main";
+    int joystickState = 0;
+    bool singleMode = true;
+    int posId = 0;
 } sysState;
 
 struct note {
-  uint32_t stepSize;
-  uint32_t phaseAcc;
-  float floatPhaseAcc;
-  int pressedCount;
-  bool active;
-
+    uint32_t stepSize;
+    uint32_t phaseAcc;
+    float floatPhaseAcc;
+    int pressedCount;
+    bool active;
 };
 
 struct {
-  std::array<note, 96> notes;
-  SemaphoreHandle_t mutex;  
+    std::array<note, 96> notes;
+    SemaphoreHandle_t mutex;
 } notes;
 
-struct ADSR{
-  bool on;
-  int attack;
-  int decay;
-  int sustain;
+struct ADSR {
+    bool on;
+    int attack;
+    int decay;
+    int sustain;
 };
-struct LFO{
-  bool on;
-  int freq;
-  int reduceLFOVolume;
+
+struct LFO {
+    bool on;
+    int freq;
+    int reduceLFOVolume;
 };
-struct Metronome{
-  bool on;
-  int speed;
+
+struct Metronome {
+    bool on;
+    int speed;
 };
-struct Lowpass{
-  int on;
-  int freq;
+
+struct Lowpass {
+    int on;
+    int freq;
 };
-struct Fade{
-  int on;
-  int sustainTime;
-  int fadeSpeed;
+
+struct Fade {
+    int on;
+    int sustainTime;
+    int fadeSpeed;
 };
-struct setting{
-  Metronome metronome;
-  Fade fade;
-  LFO lfo;
-  ADSR adsr;
-  Lowpass lowpass;
-  int volume;
-  int tune;
-  int waveIndex;
-  SemaphoreHandle_t mutex;  
-  int effectType = 0;
-  bool reverb_on = false;
-  int reverb_strength = 150;
-  bool distortion_on = false;
-  int distortion_strength = 150;
-  bool chorus_on = false;
-  int chorus_strength = 150;
-}settings;
+
+struct setting {
+    Metronome metronome;
+    Fade fade;
+    LFO lfo;
+    ADSR adsr;
+    Lowpass lowpass;
+    int volume;
+    int tune;
+    int waveIndex;
+    SemaphoreHandle_t mutex;
+
+    int effectType = 0;
+    bool reverb_on = false;
+    int reverb_strength = 150;
+    bool distortion_on = false;
+    int distortion_strength = 150;
+    bool chorus_on = false;
+    int chorus_strength = 150;
+} settings;
+
+// ============================ PIN Mappings ============================
 
 // Row select and enable
-const int RA0_PIN = D3;
-const int RA1_PIN = D6;
-const int RA2_PIN = D12;
-const int REN_PIN = A5;
+const int RA0_PIN  = D3;
+const int RA1_PIN  = D6;
+const int RA2_PIN  = D12;
+const int REN_PIN  = A5;
 
-// Matrix input and output
-const int C0_PIN = A2;
-const int C1_PIN = D9;
-const int C2_PIN = A6;
-const int C3_PIN = D1;
-const int OUT_PIN = D11;
+// Matrix inputs
+const int C0_PIN   = A2;
+const int C1_PIN   = D9;
+const int C2_PIN   = A6;
+const int C3_PIN   = D1;
+const int OUT_PIN  = D11;
 
-// Audio analogue out
+// Audio outputs
 const int OUTL_PIN = A4;
 const int OUTR_PIN = A3;
 
-// Joystick analogue in
+// Joystick inputs
 const int JOYY_PIN = A0;
 const int JOYX_PIN = A1;
 
-// Output multiplexer bits
-const int DEN_BIT = 3;
+// Output multiplexer control bits
+const int DEN_BIT  = 3;
 const int DRST_BIT = 4;
 const int HKOW_BIT = 5;
 const int HKOE_BIT = 6;
 
 std::array<std::string, 12> noteNames = {
-  "C",
-  "C#",
-  "D",
-  "D#",
-  "E",
-  "F",
-  "F#",
-  "G",
-  "G#",
-  "A",
-  "A#",
-  "B"
+  "C", "C#", "D", "D#", "E", "F",
+  "F#", "G", "G#", "A", "A#", "B"
 };
 
-const uint32_t metronomeTime[7] ={
-  22000,
-  11000,
-  5500,
-  2750,
-  1325,
-  610,
-  300
+// ---------------------------------- Metronome Intervals (Sample Counts) ----------------------------------
+const uint32_t metronomeTime[7] = {
+  22000, 11000, 5500, 2750, 1325, 610, 300
 };
 
 const uint32_t stepSizes[12] = {
@@ -288,50 +282,58 @@ float noteFrequencies[96]={
     7902.13   // B8
 };
 
+// ---------------------------------- Phase LUT ----------------------------------
 float notePhases[96];
 
-void generatePhaseLUT(){
-  for (int i=0;i<96;i++){
-    notePhases[i]=noteFrequencies[i]*M_PI/SAMPLE_RATE;
-  }
+// Precompute phase increment table based on note frequencies
+void generatePhaseLUT() {
+    for (int i = 0; i < 96; ++i) {
+        notePhases[i] = noteFrequencies[i] * M_PI / SAMPLE_RATE;
+    }
 }
 
-void init_settings(){
-  settings.fade.on=false;
-  settings.fade.fadeSpeed=2;
-  settings.fade.sustainTime=3;
-  settings.adsr.on=false;
-  settings.adsr.attack=1;
-  settings.adsr.decay=4;
-  settings.adsr.sustain=8;
-  settings.lowpass.on=false;
-  settings.lowpass.freq=500;
-  settings.metronome.on=false;
-  settings.metronome.speed=8;
-  settings.lfo.freq=20;
-  settings.lfo.on=false;
-  settings.lfo.reduceLFOVolume=2;
-  settings.volume=4;
-  settings.tune=4;
-  settings.waveIndex=0;
+// ---------------------------------- Settings Initialization ----------------------------------
+void init_settings() {
+    settings.fade.on = false;
+    settings.fade.fadeSpeed = 2;
+    settings.fade.sustainTime = 3;
+
+    settings.adsr.on = false;
+    settings.adsr.attack = 1;
+    settings.adsr.decay = 4;
+    settings.adsr.sustain = 8;
+
+    settings.lowpass.on = false;
+    settings.lowpass.freq = 500;
+
+    settings.metronome.on = false;
+    settings.metronome.speed = 8;
+
+    settings.lfo.on = false;
+    settings.lfo.freq = 20;
+    settings.lfo.reduceLFOVolume = 2;
+
+    settings.volume = 4;
+    settings.tune = 4;
+    settings.waveIndex = 0;
 }
 
-
-void set_notes(){
-  for (int i = 0; i < 96; i++){
-    // notes.notes[i].stepSize = stepSizes[i];
-    notes.notes[i].phaseAcc = 0;
-    notes.notes[i].floatPhaseAcc=0;
-    notes.notes[i].active = false;
-    // Serial.println(notes.notes[i].stepSize);
-  }
+// ---------------------------------- Notes Initialization ----------------------------------
+void set_notes() {
+    for (int i = 0; i < 96; ++i) {
+        notes.notes[i].phaseAcc = 0;
+        notes.notes[i].floatPhaseAcc = 0.0f;
+        notes.notes[i].active = false;
+    }
 }
 
-void set_pin_directions(){
+// ---------------------------------- GPIO Configuration ----------------------------------
+void set_pin_directions() {
     pinMode(RA0_PIN, OUTPUT);
     pinMode(RA1_PIN, OUTPUT);
     pinMode(RA2_PIN, OUTPUT);
     pinMode(REN_PIN, OUTPUT);
+
     pinMode(OUT_PIN, OUTPUT);
     pinMode(OUTL_PIN, OUTPUT);
     pinMode(OUTR_PIN, OUTPUT);
@@ -345,15 +347,16 @@ void set_pin_directions(){
     pinMode(JOYY_PIN, INPUT);
 }
 
-void setOutMuxBit(const uint8_t bitIdx, const bool value) {
-      digitalWrite(REN_PIN,LOW);
-      digitalWrite(RA0_PIN, bitIdx & 0x01);
-      digitalWrite(RA1_PIN, bitIdx & 0x02);
-      digitalWrite(RA2_PIN, bitIdx & 0x04);
-      digitalWrite(OUT_PIN,value);
-      digitalWrite(REN_PIN,HIGH);
-      delayMicroseconds(2);
-      digitalWrite(REN_PIN,LOW);
+// ---------------------------------- Multiplexer Bit Output ----------------------------------
+void setOutMuxBit(uint8_t bitIndex, bool state) {
+    digitalWrite(REN_PIN, LOW);
+    digitalWrite(RA0_PIN, bitIndex & 0x01);
+    digitalWrite(RA1_PIN, bitIndex & 0x02);
+    digitalWrite(RA2_PIN, bitIndex & 0x04);
+    digitalWrite(OUT_PIN, state);
+    digitalWrite(REN_PIN, HIGH);
+    delayMicroseconds(2);
+    digitalWrite(REN_PIN, LOW);
 }
 
 void initial_display(){
