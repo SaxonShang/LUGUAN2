@@ -205,7 +205,7 @@ Below is a dependency diagram that illustrates the overall structure.
 - Move to the second page if the menu list exceeds the page height.
 - Adjust the state parameter (**On/Off**) using **Knob 2**.
 
-![image](https://github.com/SaxonShang/LUGUAN2/blob/main/doc/MEBU2.jpg)
+![image](https://github.com/SaxonShang/LUGUAN2/blob/main/doc/MENUPAGE.jpg)
 ![image](https://github.com/SaxonShang/LUGUAN2/blob/main/doc/PAGE2.jpg)
 ### Metronome (Met)
 - Provides steady beats for accurate rhythm.
@@ -226,6 +226,27 @@ Below is a dependency diagram that illustrates the overall structure.
 - Adjust **cutoff frequency** (*500Hz - 2000Hz*) using **Knob 3**.
 
 ![image](https://github.com/SaxonShang/LUGUAN2/blob/main/doc/LPF.jpg)
+
+### Reverb (REV)
+
+- Press **Knob 2** to enable the reverb.
+- Adjust the reverb strength using **Knob 3**.
+
+![image](https://github.com/SaxonShang/LUGUAN2/blob/main/doc/EFF.jpg)
+
+
+### Distortion (DIS)
+
+- Press **Knob 2** to enable the distortion.
+- Adjust the distortion strength using **Knob 3**.
+![image](https://github.com/SaxonShang/LUGUAN2/blob/main/doc/DIS.jpg)
+
+### Chorus (CHO)
+
+- Press **Knob 2** to enable the chorus.
+- Adjust the chorus strength using **Knob 3**.
+
+![image](https://github.com/SaxonShang/LUGUAN2/blob/main/doc/CHO.jpg)
 
 
 This manual provides an overview of the *LUGUAN Keyboard* functions, making it easy to navigate and customize your sound. Enjoy your music creation! 🎵
